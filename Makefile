@@ -1,6 +1,6 @@
 CXX = clang++
 EXE = audio-visualizer
-SOURCES = main.cpp
+SOURCES = main.cpp converter.cpp
 
 IMGUI_DIR = lib/imgui
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
@@ -15,9 +15,8 @@ LINUX_GL_LIBS = -lGL
 CXXFLAGS = -g -Wall -Wformat
 CXXFLAGS += -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -I$(TINYFD_DIR)
-LIBS =
 
-LIBS += $(LINUX_GL_LIBS) -ldl `sdl2-config --libs`
+LIBS = $(LINUX_GL_LIBS) -ldl `sdl2-config --libs` -lmpg123
 
 CXXFLAGS += `sdl2-config --cflags`
 CFLAGS = $(CXXFLAGS)
