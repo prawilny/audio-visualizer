@@ -1,3 +1,6 @@
 [submodule "lib/imgui"]
 	path = lib/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "lib/tinyfd"]
+	path = lib/tinyfd
+	url = http://git.code.sf.net/p/tinyfiledialogs/code
