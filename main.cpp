@@ -14,6 +14,9 @@
 #include <stdexcept>
 #include <stdio.h>
 
+const int MP3_FREQ = 44100;
+const int TARGET_FPS = 60;
+
 static SDL_Window *window;
 static SDL_GLContext gl_context;
 static ImGuiIO *io;
@@ -33,14 +36,26 @@ void SDL_error_exit() {
 }
 
 void audio_callback(void *udata, Uint8 *stream, int len) {
-  assert(len + audio_data->processed_bytes <= audio_data->bytes.size());
-  memcpy(stream, audio_data->bytes.data(), len);
+  SDL_memset(stream, 0, len);
 
-  // TODO: fill buffer and generate visualization data.
+  size_t left_in_buffer =
+      audio_data->bytes.size() - audio_data->processed_bytes;
+  if (left_in_buffer == 0) {
+    audio_played = false;
+    audio_data->processed_bytes = 0;
+    return;
+  }
+
+  int copied = len < left_in_buffer ? len : left_in_buffer;
+  SDL_MixAudio(stream, audio_data->bytes.data() + audio_data->processed_bytes,
+               copied, SDL_MIX_MAXVOLUME);
+  audio_data->processed_bytes += copied;
+
+  // TODO: fill buffer and generate visualization data (not on every callback).
 }
 
 void start_audio() {
-  if (audio_played) {
+  if (audio_played || audio_data.get() == nullptr) {
     return;
   }
 
@@ -52,14 +67,12 @@ void start_audio() {
   }
 
   SDL_AudioSpec wanted_spec;
-  wanted_spec.freq = 44100;
+  wanted_spec.freq = MP3_FREQ;
   wanted_spec.format = audio_data->format;
   wanted_spec.channels = audio_data->channels;
   wanted_spec.silence = 0;
   wanted_spec.size = audio_data->bytes.size() - audio_data->processed_bytes;
-  wanted_spec.samples =
-      wanted_spec.size /
-      (audio_data->rate * sample_byte_size * wanted_spec.channels);
+  wanted_spec.samples = MP3_FREQ / (TARGET_FPS - 1);
   wanted_spec.callback = audio_callback;
   wanted_spec.userdata = nullptr;
 
@@ -85,6 +98,7 @@ void stop_audio() {
 
 void select_file() {
   stop_audio();
+  audio_name = nullptr;
   char *new_audio_name = tinyfd_openFileDialog(
       "Pick file", nullptr, 1, audio_types, "All supported files", false);
 
@@ -95,8 +109,6 @@ void select_file() {
   try {
     audio_data = from_mp3(new_audio_name);
     audio_name = new_audio_name;
-
-    start_audio();
   } catch (...) {
     std::cout << "Error reading or opening file " << new_audio_name
               << std::endl;
