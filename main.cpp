@@ -20,7 +20,7 @@ static ImGuiIO *io;
 
 static const char *audio_types[1] = {"*.mp3"};
 static char *audio_name = nullptr;
-static bool played = false;
+static bool audio_played = false;
 static bool done = false;
 
 std::unique_ptr<PCM_data> audio_data;
@@ -40,6 +40,10 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
 }
 
 void start_audio() {
+  if (audio_played) {
+    return;
+  }
+
   uint8_t sample_byte_size = (audio_data->format & SDL_AUDIO_MASK_BITSIZE) / 8;
 
   if (sample_byte_size > 1) {
@@ -63,16 +67,24 @@ void start_audio() {
     SDL_error_exit();
   }
   SDL_PauseAudio(0);
+  audio_played = true;
 }
 
 void stop_audio() {
+  if (!audio_played) {
+    return;
+  }
+
   SDL_LockAudio();
   SDL_PauseAudio(1);
   SDL_UnlockAudio();
   SDL_CloseAudio();
+
+  audio_played = false;
 }
 
 void select_file() {
+  stop_audio();
   char *new_audio_name = tinyfd_openFileDialog(
       "Pick file", nullptr, 1, audio_types, "All supported files", false);
 
@@ -81,9 +93,10 @@ void select_file() {
   }
 
   try {
-    PCM_data sound = from_mp3(new_audio_name);
-
+    audio_data = from_mp3(new_audio_name);
     audio_name = new_audio_name;
+
+    start_audio();
   } catch (...) {
     std::cout << "Error reading or opening file " << new_audio_name
               << std::endl;
@@ -91,12 +104,11 @@ void select_file() {
 }
 
 void toggle_playback() {
-  if (played) {
+  if (audio_played) {
     stop_audio();
   } else {
     start_audio();
   }
-  played = !played;
 }
 
 void set_up() {
@@ -167,7 +179,7 @@ void imgui_frame() {
       toggle_playback();
     }
     ImGui::SameLine();
-    ImGui::Text("Playback status: %s", played ? "PLAY" : "PAUSE");
+    ImGui::Text("Playback status: %s", audio_played ? "PLAY" : "PAUSE");
 
     ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
 

@@ -4,6 +4,7 @@
 #include <SDL_audio.h>
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 struct PCM_data {
   std::vector<uint8_t> bytes;
@@ -13,6 +14,6 @@ struct PCM_data {
   size_t processed_bytes;
 };
 
-PCM_data from_mp3(const char *filename);
+std::unique_ptr<PCM_data> from_mp3(const char *filename);
 
 #endif // _AUDIO_VISUALIZER_CONVERTER_H_
