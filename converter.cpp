@@ -1,7 +1,9 @@
 #include "converter.h"
+#include <SDL_audio.h>
 #include <cstdio>
 #include <cstring>
 #include <exception>
+#include <fmt123.h>
 #include <mpg123.h>
 #include <sstream>
 
@@ -10,8 +12,48 @@ static void cleanup(mpg123_handle *mh) {
   mpg123_delete(mh);
 }
 
+static SDL_AudioFormat format_from_mpg123(int encoding) {
+  switch (encoding) {
+  case MPG123_ENC_SIGNED_16:
+    return AUDIO_S16;
+  case MPG123_ENC_UNSIGNED_16:
+    return AUDIO_U16;
+  case MPG123_ENC_UNSIGNED_8:
+    return AUDIO_U8;
+  case MPG123_ENC_SIGNED_8:
+    return AUDIO_S8;
+  case MPG123_ENC_SIGNED_32:
+    return AUDIO_S32;
+  case MPG123_ENC_FLOAT_32:
+
+  /* Not supported */
+  case MPG123_ENC_SIGNED_24:
+  case MPG123_ENC_UNSIGNED_24:
+  case MPG123_ENC_FLOAT_64:
+  case MPG123_ENC_UNSIGNED_32:
+
+  /* Compounding */
+  case MPG123_ENC_ULAW_8:
+  case MPG123_ENC_ALAW_8:
+
+  /* Not specified bitness */
+  case MPG123_ENC_8:
+  case MPG123_ENC_16:
+  case MPG123_ENC_24:
+  case MPG123_ENC_32:
+  case MPG123_ENC_SIGNED:
+  case MPG123_ENC_FLOAT:
+
+  default:
+    std::stringstream ss;
+    ss << "mpg123 format not supported by SDL: " << encoding;
+    throw new std::runtime_error(ss.str());
+  }
+}
+
 PCM_data from_mp3(const char *filename) {
   PCM_data result;
+  int encoding;
 
   int err = MPG123_OK;
   mpg123_handle *mh = NULL;
@@ -30,8 +72,8 @@ PCM_data from_mp3(const char *filename) {
 
   if (mpg123_open(mh, filename) != MPG123_OK
       /* Peek into track and get first output format. */
-      || mpg123_getformat(mh, &result.rate, &result.channels,
-                          &result.encoding) != MPG123_OK) {
+      || mpg123_getformat(mh, &result.rate, &result.channels, &encoding) !=
+             MPG123_OK) {
     cleanup(mh);
     std::stringstream ss;
     ss << filename << " couldn't be read as a mp3 file.";
@@ -41,7 +83,7 @@ PCM_data from_mp3(const char *filename) {
   /* Ensure that this output format will not change
      (it might, when we allow it). */
   mpg123_format_none(mh);
-  mpg123_format(mh, result.rate, result.channels, result.encoding);
+  mpg123_format(mh, result.rate, result.channels, encoding);
 
   size_t buffer_size = mpg123_outblock(mh);
   std::vector<uint8_t> buffer(buffer_size, 0);
@@ -63,5 +105,8 @@ PCM_data from_mp3(const char *filename) {
   }
 
   cleanup(mh);
+
+  result.format = format_from_mpg123(encoding);
+  result.processed_bytes = 0;
   return result;
 }

@@ -4,9 +4,13 @@
 #include "imgui_impl_sdl.h"
 #include "tinyfiledialogs.h"
 #include <SDL.h>
+#include <SDL_audio.h>
 #include <SDL_opengl.h>
+#include <cassert>
 #include <exception>
+#include <fmt123.h>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <stdio.h>
 
@@ -14,10 +18,59 @@ static SDL_Window *window;
 static SDL_GLContext gl_context;
 static ImGuiIO *io;
 
-static const char *audio_types[1] = {"*"};
+static const char *audio_types[1] = {"*.mp3"};
 static char *audio_name = nullptr;
 static bool played = false;
 static bool done = false;
+
+std::unique_ptr<PCM_data> audio_data;
+
+// TODO: make sure that visualization matches audio
+
+void SDL_error_exit() {
+  printf("Error: %s\n", SDL_GetError());
+  exit(1);
+}
+
+void audio_callback(void *udata, Uint8 *stream, int len) {
+  assert(len + audio_data->processed_bytes <= audio_data->bytes.size());
+  memcpy(stream, audio_data->bytes.data(), len);
+
+  // TODO: fill buffer and generate visualization data.
+}
+
+void start_audio() {
+  uint8_t sample_byte_size = (audio_data->format & SDL_AUDIO_MASK_BITSIZE) / 8;
+
+  if (sample_byte_size > 1) {
+    audio_data->processed_bytes -=
+        audio_data->processed_bytes % sample_byte_size;
+  }
+
+  SDL_AudioSpec wanted_spec;
+  wanted_spec.freq = 44100;
+  wanted_spec.format = audio_data->format;
+  wanted_spec.channels = audio_data->channels;
+  wanted_spec.silence = 0;
+  wanted_spec.size = audio_data->bytes.size() - audio_data->processed_bytes;
+  wanted_spec.samples =
+      wanted_spec.size /
+      (audio_data->rate * sample_byte_size * wanted_spec.channels);
+  wanted_spec.callback = audio_callback;
+  wanted_spec.userdata = nullptr;
+
+  if (SDL_OpenAudio(&wanted_spec, nullptr) != 0) {
+    SDL_error_exit();
+  }
+  SDL_PauseAudio(0);
+}
+
+void stop_audio() {
+  SDL_LockAudio();
+  SDL_PauseAudio(1);
+  SDL_UnlockAudio();
+  SDL_CloseAudio();
+}
 
 void select_file() {
   char *new_audio_name = tinyfd_openFileDialog(
@@ -28,21 +81,27 @@ void select_file() {
   }
 
   try {
-    PCM_data bytes = from_mp3(new_audio_name);
+    PCM_data sound = from_mp3(new_audio_name);
 
     audio_name = new_audio_name;
   } catch (...) {
-    std::cout << "Error reading or opening file " << new_audio_name << std::endl;
+    std::cout << "Error reading or opening file " << new_audio_name
+              << std::endl;
   }
 }
 
-void toggle_playback() { played = !played; }
+void toggle_playback() {
+  if (played) {
+    stop_audio();
+  } else {
+    start_audio();
+  }
+  played = !played;
+}
 
 void set_up() {
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) !=
-      0) {
-    printf("Error: %s\n", SDL_GetError());
-    exit(1);
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) {
+    SDL_error_exit();
   }
 
   // GL 3.0 + GLSL 130
