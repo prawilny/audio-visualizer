@@ -1,4 +1,5 @@
 #include "converter.h"
+#include "fft.h"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl.h"
@@ -13,8 +14,8 @@
 #include <memory>
 #include <stdexcept>
 #include <stdio.h>
+#include <vector>
 
-const int MP3_FREQ = 44100;
 const int TARGET_FPS = 60;
 
 static SDL_Window *window;
@@ -26,6 +27,8 @@ static char *audio_name = nullptr;
 static bool audio_played = false;
 static bool done = false;
 
+// Needed for debugging.
+template class std::unique_ptr<PCM_data>;
 std::unique_ptr<PCM_data> audio_data;
 
 // TODO: make sure that visualization matches audio
@@ -35,6 +38,44 @@ void SDL_error_exit() {
   exit(1);
 }
 
+double fromBytes(uint8_t *bytes, SDL_AudioFormat format) {
+  switch (format) {
+  case AUDIO_S16:
+    return *(reinterpret_cast<int16_t *>(bytes));
+  case AUDIO_U16:
+    return *(reinterpret_cast<uint16_t *>(bytes));
+  case AUDIO_U8:
+    return *bytes;
+  case AUDIO_S8:
+    return *(reinterpret_cast<int8_t *>(bytes));
+  case AUDIO_S32:
+    return *(reinterpret_cast<int32_t *>(bytes));
+  default:
+    assert(false);
+  }
+}
+
+std::vector<double> fft_samples(int num_bytes) {
+  // We may have to merge samples of two channels and cast results to double.
+
+  size_t sample_byte_size = (SDL_AUDIO_MASK_BITSIZE & audio_data->format) / 8;
+  size_t num_samples = num_bytes / (sample_byte_size * audio_data->channels);
+
+  std::vector<double> result(num_samples, 0);
+
+  size_t bytes_processed = 0;
+  for (int i = 0; i < num_samples; i++) {
+    for (int ch = 0; ch < audio_data->channels; ch++) {
+      result[i] += (double)(fromBytes(
+          audio_data->bytes.data() + bytes_processed, audio_data->format));
+      bytes_processed += sample_byte_size;
+    }
+  }
+  assert(num_bytes == bytes_processed);
+
+  return result;
+}
+
 void audio_callback(void *udata, Uint8 *stream, int len) {
   SDL_memset(stream, 0, len);
 
@@ -42,16 +83,19 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
       audio_data->bytes.size() - audio_data->processed_bytes;
   if (left_in_buffer == 0) {
     audio_played = false;
-    audio_data->processed_bytes = 0;
     return;
   }
 
-  int copied = len < left_in_buffer ? len : left_in_buffer;
-  SDL_MixAudio(stream, audio_data->bytes.data() + audio_data->processed_bytes,
-               copied, SDL_MIX_MAXVOLUME);
-  audio_data->processed_bytes += copied;
+  int bytes_to_be_copied = len < left_in_buffer ? len : left_in_buffer;
 
-  // TODO: fill buffer and generate visualization data (not on every callback).
+  std::vector<double> fft_input = fft_samples(bytes_to_be_copied);
+  std::vector<double> fft_results = amplitudes_of_harmonics(fft_input);
+
+  SDL_MixAudio(stream, audio_data->bytes.data() + audio_data->processed_bytes,
+               bytes_to_be_copied, SDL_MIX_MAXVOLUME);
+  audio_data->processed_bytes += bytes_to_be_copied;
+
+  // TODO: fill buffer and generate visualization data. How often should it be?
 }
 
 void start_audio() {
@@ -67,12 +111,15 @@ void start_audio() {
   }
 
   SDL_AudioSpec wanted_spec;
-  wanted_spec.freq = MP3_FREQ;
+  wanted_spec.freq = audio_data->rate;
   wanted_spec.format = audio_data->format;
   wanted_spec.channels = audio_data->channels;
   wanted_spec.silence = 0;
   wanted_spec.size = audio_data->bytes.size() - audio_data->processed_bytes;
-  wanted_spec.samples = MP3_FREQ / (TARGET_FPS - 1);
+  wanted_spec.samples = wanted_spec.freq / (TARGET_FPS - 1);
+  wanted_spec.samples -=
+      wanted_spec.samples % wanted_spec.channels; // Aligning to 0 % channels
+
   wanted_spec.callback = audio_callback;
   wanted_spec.userdata = nullptr;
 

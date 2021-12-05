@@ -1,5 +1,6 @@
 #include "converter.h"
 #include <SDL_audio.h>
+#include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <exception>
@@ -109,5 +110,8 @@ std::unique_ptr<PCM_data> from_mp3(const char *filename) {
 
   result->format = format_from_mpg123(encoding);
   result->processed_bytes = 0;
+
+  assert(result->channels == 1 || result->channels == 2);
+  assert(result->rate > 0);
   return result;
 }
