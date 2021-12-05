@@ -3,8 +3,10 @@
 
 #include <complex>
 #include <fftw3.h>
+#include <memory>
 #include <vector>
 
-std::vector<double> amplitudes_of_harmonics(std::vector<double> &wave_values);
+std::unique_ptr<std::vector<double>>
+amplitudes_of_harmonics(std::vector<double> &wave_values);
 
 #endif

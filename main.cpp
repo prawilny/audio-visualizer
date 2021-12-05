@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl.h"
+#include "implot.h"
 #include "tinyfiledialogs.h"
 #include <SDL.h>
 #include <SDL_audio.h>
@@ -12,11 +13,12 @@
 #include <fmt123.h>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 #include <stdio.h>
 #include <vector>
 
-const int TARGET_FPS = 60;
+const int TARGET_FPS = 10;
 
 static SDL_Window *window;
 static SDL_GLContext gl_context;
@@ -30,6 +32,9 @@ static bool done = false;
 // Needed for debugging.
 template class std::unique_ptr<PCM_data>;
 std::unique_ptr<PCM_data> audio_data;
+
+std::unique_ptr<std::vector<double>> plot_data;
+std::unique_ptr<std::vector<double>> plot_fft_input;
 
 // TODO: make sure that visualization matches audio
 
@@ -90,7 +95,11 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
   int bytes_to_be_copied = len < left_in_buffer ? len : left_in_buffer;
 
   std::vector<double> fft_input = fft_samples(bytes_to_be_copied);
-  std::vector<double> fft_results = amplitudes_of_harmonics(fft_input);
+  std::vector<double> *copied_input = new std::vector<double>();
+  *copied_input = fft_input;
+  plot_fft_input = std::unique_ptr<std::vector<double>>(copied_input);
+
+  plot_data = amplitudes_of_harmonics(fft_input);
 
   SDL_MixAudio(stream, audio_data->bytes.data() + audio_data->processed_bytes,
                bytes_to_be_copied, SDL_MIX_MAXVOLUME);
@@ -117,7 +126,7 @@ void start_audio() {
   wanted_spec.channels = audio_data->channels;
   wanted_spec.silence = 0;
   wanted_spec.size = audio_data->bytes.size() - audio_data->processed_bytes;
-  wanted_spec.samples = wanted_spec.freq / (TARGET_FPS - 1);
+  wanted_spec.samples = wanted_spec.freq / TARGET_FPS;
   wanted_spec.samples -=
       wanted_spec.samples % wanted_spec.channels; // Aligning to 0 % channels
 
@@ -202,6 +211,7 @@ void set_up() {
   // Setup Dear ImGui
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  ImPlot::CreateContext();
   io = &ImGui::GetIO();
   ImGui::StyleColorsDark();
 
@@ -213,6 +223,7 @@ void set_up() {
 void clean_up() {
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplSDL2_Shutdown();
+  ImPlot::DestroyContext();
   ImGui::DestroyContext();
 
   SDL_GL_DeleteContext(gl_context);
@@ -242,6 +253,32 @@ void imgui_frame() {
     ImGui::Text("Playback status: %s", audio_played ? "PLAY" : "PAUSE");
 
     ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
+
+    if (plot_data.get() != nullptr) {
+      std::vector<double> xs(plot_data.get()->size());
+      for (size_t i = 0; i < xs.size(); i++) {
+        xs[i] = i * TARGET_FPS;
+      }
+
+      std::vector<double> xs2(plot_fft_input.get()->size());
+      std::iota(xs2.begin(), xs2.end(), 0);
+
+      if (ImPlot::BeginPlot("Poor man's spectogram")) {
+        ImPlot::SetupAxis(ImAxis_X1, NULL, 0);
+        ImPlot::SetupAxis(ImAxis_Y1, NULL, 0);
+        ImPlot::PlotScatter("test", xs.data(), plot_data->data(),
+                         plot_data->size());
+        ImPlot::EndPlot();
+      }
+
+      if (ImPlot::BeginPlot("FFT input")) {
+        ImPlot::SetupAxis(ImAxis_X1, NULL, 0);
+        ImPlot::SetupAxis(ImAxis_Y1, NULL, 0);
+        ImPlot::PlotScatter("test", xs2.data(), plot_fft_input->data(),
+                         plot_fft_input->size());
+        ImPlot::EndPlot();
+      }
+    }
 
     ImGui::End();
   }

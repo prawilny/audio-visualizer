@@ -4,3 +4,6 @@
 [submodule "lib/tinyfd"]
 	path = lib/tinyfd
 	url = http://git.code.sf.net/p/tinyfiledialogs/code
+[submodule "lib/implot"]
+	path = lib/implot
+	url = https://github.com/epezent/implot

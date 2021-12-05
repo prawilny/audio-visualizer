@@ -1,6 +1,8 @@
 #include "fft.h"
-#include <fftw3.h>
 #include <cmath>
+#include <fftw3.h>
+#include <memory>
+#include <vector>
 // TODO: Check single-precision FFT in case it bottlenecks the program.
 
 #define RE_IDX 0
@@ -13,7 +15,8 @@
 // TODO: the layout of data is: SAMPLE_LEFT || SAMPLE_RIGHT || SAMPLE_LEFT ||
 // SAMPLE_RIGHT... What value should we use: sum/average? max?
 
-std::vector<double> amplitudes_of_harmonics(std::vector<double> &wave_values) {
+std::unique_ptr<std::vector<double>>
+amplitudes_of_harmonics(std::vector<double> &wave_values) {
   size_t n = wave_values.size();
 
   fftw_complex *in_out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * n);
@@ -33,9 +36,11 @@ std::vector<double> amplitudes_of_harmonics(std::vector<double> &wave_values) {
   fftw_execute(plan);
   fftw_destroy_plan(plan);
 
-  std::vector<double> result(n, 0);
+  std::unique_ptr<std::vector<double>> result =
+      std::make_unique<std::vector<double>>(n, 0);
   for (size_t i = 0; i < n; i++) {
-      result[i] = sqrt(in_out[i][RE_IDX] * in_out[i][RE_IDX] + in_out[i][IM_IDX] * in_out[i][IM_IDX]);
+    (*result)[i] = sqrt(in_out[i][RE_IDX] * in_out[i][RE_IDX] +
+                        in_out[i][IM_IDX] * in_out[i][IM_IDX]);
   }
 
   fftw_free(in_out);
