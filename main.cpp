@@ -63,15 +63,16 @@ std::vector<double> fft_samples(int num_bytes) {
 
   std::vector<double> result(num_samples, 0);
 
-  size_t bytes_processed = 0;
+  size_t processed = 0;
   for (int i = 0; i < num_samples; i++) {
     for (int ch = 0; ch < audio_data->channels; ch++) {
       result[i] += (double)(fromBytes(
-          audio_data->bytes.data() + bytes_processed, audio_data->format));
-      bytes_processed += sample_byte_size;
+          audio_data->bytes.data() + audio_data->processed_bytes + processed,
+          audio_data->format));
+      processed += sample_byte_size;
     }
   }
-  assert(num_bytes == bytes_processed);
+  assert(num_bytes == processed);
 
   return result;
 }
