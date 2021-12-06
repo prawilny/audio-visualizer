@@ -19,31 +19,26 @@ std::unique_ptr<std::vector<double>>
 amplitudes_of_harmonics(std::vector<double> &wave_values) {
   size_t n = wave_values.size();
 
-  fftw_complex *in_out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * n);
-  if (in_out == nullptr) {
+  fftw_complex *out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * n);
+  if (out == nullptr) {
     printf("Error: fftw_malloc()\n");
     exit(2);
   }
 
   fftw_plan plan =
-      fftw_plan_dft_1d(n, in_out, in_out, FFTW_FORWARD, FFTW_ESTIMATE);
-
-  for (size_t i = 0; i < n; i++) {
-    in_out[i][RE_IDX] = wave_values[i];
-    in_out[i][IM_IDX] = 0;
-  }
+      fftw_plan_dft_r2c_1d(n, wave_values.data(), out, FFTW_ESTIMATE);
 
   fftw_execute(plan);
   fftw_destroy_plan(plan);
 
   std::unique_ptr<std::vector<double>> result =
-      std::make_unique<std::vector<double>>(n, 0);
-  for (size_t i = 0; i < n; i++) {
-    (*result)[i] = sqrt(in_out[i][RE_IDX] * in_out[i][RE_IDX] +
-                        in_out[i][IM_IDX] * in_out[i][IM_IDX]);
+      std::make_unique<std::vector<double>>(n / 2, 0);
+  for (size_t i = 0; i < n / 2; i++) {
+    (*result)[i] =
+        sqrt(out[i][RE_IDX] * out[i][RE_IDX] + out[i][IM_IDX] * out[i][IM_IDX]);
   }
 
-  fftw_free(in_out);
+  fftw_free(out);
 
   return result;
 }
