@@ -199,9 +199,8 @@ void set_up() {
 
   // TODO: replace SDL_WINDOW_RESIZABLE with SDL_WINDOW_FULLSCREEN or
   // SDL_WINDOW_FULLSCREEN_DESKTOP
-  SDL_WindowFlags window_flags =
-      (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
-                        SDL_WINDOW_ALLOW_HIGHDPI);
+  SDL_WindowFlags window_flags = (SDL_WindowFlags)(
+      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
   window = SDL_CreateWindow("Audio Visualizer", SDL_WINDOWPOS_CENTERED,
                             SDL_WINDOWPOS_CENTERED, 1920, 1080, window_flags);
   gl_context = SDL_GL_CreateContext(window);
@@ -267,7 +266,7 @@ void imgui_frame() {
         ImPlot::SetupAxis(ImAxis_X1, NULL, 0);
         ImPlot::SetupAxis(ImAxis_Y1, NULL, 0);
         ImPlot::PlotScatter("test", xs.data(), plot_data->data(),
-                         plot_data->size());
+                            plot_data->size());
         ImPlot::EndPlot();
       }
 
@@ -275,7 +274,7 @@ void imgui_frame() {
         ImPlot::SetupAxis(ImAxis_X1, NULL, 0);
         ImPlot::SetupAxis(ImAxis_Y1, NULL, 0);
         ImPlot::PlotScatter("test", xs2.data(), plot_fft_input->data(),
-                         plot_fft_input->size());
+                            plot_fft_input->size());
         ImPlot::EndPlot();
       }
     }
