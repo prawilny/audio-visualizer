@@ -1,9 +1,11 @@
 #include "converter.h"
 #include "fft.h"
+#include "gl.h"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl.h"
 #include "implot.h"
+#include "spectrogram.h"
 #include "tinyfiledialogs.h"
 #include <SDL.h>
 #include <SDL_audio.h>
@@ -199,11 +201,13 @@ void set_up() {
 
   // TODO: replace SDL_WINDOW_RESIZABLE with SDL_WINDOW_FULLSCREEN or
   // SDL_WINDOW_FULLSCREEN_DESKTOP
-  SDL_WindowFlags window_flags = (SDL_WindowFlags)(
-      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+  SDL_WindowFlags window_flags =
+      (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
+                        SDL_WINDOW_ALLOW_HIGHDPI);
   window = SDL_CreateWindow("Audio Visualizer", SDL_WINDOWPOS_CENTERED,
                             SDL_WINDOWPOS_CENTERED, 1920, 1080, window_flags);
   gl_context = SDL_GL_CreateContext(window);
+  gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
   SDL_GL_MakeCurrent(window, gl_context);
   SDL_GL_SetSwapInterval(1); // Enable vsync
 
@@ -253,36 +257,21 @@ void imgui_frame() {
 
     ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
 
-    if (plot_data.get() != nullptr) {
-      std::vector<double> xs(plot_data.get()->size());
-      for (size_t i = 0; i < xs.size(); i++) {
-        xs[i] = i * TARGET_FPS;
-      }
-
-      std::vector<double> xs2(plot_fft_input.get()->size());
-      std::iota(xs2.begin(), xs2.end(), 0);
-
-      if (ImPlot::BeginPlot("Poor man's spectogram")) {
-        ImPlot::SetupAxis(ImAxis_X1, NULL, 0);
-        ImPlot::SetupAxis(ImAxis_Y1, NULL, 0);
-        ImPlot::PlotScatter("test", xs.data(), plot_data->data(),
-                            plot_data->size());
-        ImPlot::EndPlot();
-      }
-
-      if (ImPlot::BeginPlot("FFT input")) {
-        ImPlot::SetupAxis(ImAxis_X1, NULL, 0);
-        ImPlot::SetupAxis(ImAxis_Y1, NULL, 0);
-        ImPlot::PlotScatter("test", xs2.data(), plot_fft_input->data(),
-                            plot_fft_input->size());
-        ImPlot::EndPlot();
-      }
-    }
-
     ImGui::End();
   }
   // Rendering
   ImGui::Render();
+}
+
+void draw_visualization() {
+  if (plot_data.get() != nullptr) {
+    size_t n = plot_data.get()->size();
+    std::vector<double> xs(n);
+    for (size_t i = 0; i < n; i++) {
+      xs[i] = i * TARGET_FPS;
+    }
+    displaySpectrogram(xs.data(), plot_data.get()->data(), n);
+  }
 }
 
 int main() {
@@ -306,9 +295,10 @@ int main() {
     imgui_frame();
 
     glViewport(0, 0, (int)io->DisplaySize.x, (int)io->DisplaySize.y);
-    // TODO: visualization
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    draw_visualization();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
   }
