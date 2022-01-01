@@ -1,6 +1,6 @@
 CXX = clang++
 EXE = audio-visualizer
-SOURCES = main.cpp converter.cpp fft.cpp spectrogram.cpp gl.c
+SOURCES = main.cpp converter.cpp fft.cpp spectrogram.cpp gl.c shader_utils.cpp
 
 IMGUI_DIR = lib/imgui
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
