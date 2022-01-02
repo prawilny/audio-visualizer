@@ -1,8 +1,11 @@
 #include "spectrogram.h"
+#include "SDL_audio.h"
 #include "fft.h"
 #include "gl.h"
 #include "shader_utils.h"
 #include <SDL_opengl.h>
+#include <limits>
+#include <stdexcept>
 #include <vector>
 
 // TODO: return to GLdouble
@@ -66,21 +69,44 @@ static std::vector<point> fftGraph(double *labels, double *values, size_t n) {
   return graph;
 }
 
-static std::vector<point> waveGraph(double *labels, double *values, size_t n) {
+static double scaleY(double y, SDL_AudioFormat format) {
+  switch (format) {
+  case AUDIO_S8:
+    return y / std::numeric_limits<int8_t>::max();
+  case AUDIO_S16:
+    return y / std::numeric_limits<int16_t>::max();
+  case AUDIO_S32:
+    return y / std::numeric_limits<int32_t>::max();
+  case AUDIO_U8:
+    return y / (std::numeric_limits<uint8_t>::max() / 2) - 1;
+  case AUDIO_U16:
+    return y / (std::numeric_limits<uint16_t>::max() / 2) - 1;
+  default:
+    throw std::runtime_error("scaleY: unsupported audio format");
+  }
+}
+
+static std::vector<point> waveGraph(double *labels, double *values, size_t n,
+                                    SDL_AudioFormat format) {
   std::vector<point> graph(n);
   double labelSpan = span(labels, n);
   for (size_t i = 0; i < n; i++) {
     graph[i].x = 2 * (labels[i] / labelSpan - 0.5);
-    graph[i].y = -0.5;
+
+    double scaledY = scaleY(values[i], format);
+
+    graph[i].y = scaledY / 4 - 0.5;
   }
   return graph;
 }
 
 void spectrogramDisplay(double *fftLabels, double *fftValues, size_t fftN,
-                        double *waveLabels, double *waveValues, size_t waveN) {
+                        double *waveLabels, double *waveValues, size_t waveN,
+                        SDL_AudioFormat format) {
   std::vector<point> fftData = fftGraph(fftLabels, fftValues, fftN);
   display(fftData, fft_program, fft_attr_coord2d);
 
-  std::vector<point> waveGraphData = waveGraph(waveLabels, waveValues, waveN);
+  std::vector<point> waveGraphData =
+      waveGraph(waveLabels, waveValues, waveN, format);
   display(waveGraphData, wave_program, wave_attr_coord2d);
 }

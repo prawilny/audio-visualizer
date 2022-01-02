@@ -279,7 +279,8 @@ void draw_visualization() {
     std::iota(waveLabels.begin(), waveLabels.end(), 0);
 
     spectrogramDisplay(fftLabels.data(), plot_data.get()->data(), fftN,
-                       waveLabels.data(), plot_fft_input->data(), waveN);
+                       waveLabels.data(), plot_fft_input->data(), waveN,
+                       audio_data->format);
   }
 }
 
