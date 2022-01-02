@@ -268,12 +268,18 @@ void imgui_frame() {
 
 void draw_visualization() {
   if (plot_data.get() != nullptr) {
-    size_t n = plot_data.get()->size();
-    std::vector<double> xs(n);
-    for (size_t i = 0; i < n; i++) {
-      xs[i] = i * TARGET_FPS;
+    size_t fftN = plot_data.get()->size();
+    std::vector<double> fftLabels(fftN);
+    for (size_t i = 0; i < fftN; i++) {
+      fftLabels[i] = i * TARGET_FPS;
     }
-    spectrogramDisplay(xs.data(), plot_data.get()->data(), n);
+
+    size_t waveN = plot_fft_input.get()->size();
+    std::vector<double> waveLabels(waveN);
+    std::iota(waveLabels.begin(), waveLabels.end(), 0);
+
+    spectrogramDisplay(fftLabels.data(), plot_data.get()->data(), fftN,
+                       waveLabels.data(), plot_fft_input->data(), waveN);
   }
 }
 

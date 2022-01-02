@@ -6,6 +6,7 @@
 
 void spectrogramInit();
 
-void spectrogramDisplay(double *labels, double *values, size_t n);
+void spectrogramDisplay(double *fftLabels, double *fftValues, size_t fftN,
+                        double *waveLabels, double *waveValues, size_t waveN);
 
 #endif

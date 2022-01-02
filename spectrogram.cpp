@@ -11,46 +11,76 @@ struct point {
   GLfloat y;
 };
 
-static const char *VERTEX_SHADER = "spectrogram.vertex.glsl";
-static const char *FRAGMENT_SHADER = "spectrogram.fragment.glsl";
+static const char *FFT_VERTEX_SHADER = "fft.vertex.glsl";
+static const char *WAVE_VERTEX_SHADER = "wave.vertex.glsl";
+static const char *FFT_FRAGMENT_SHADER = "fft.fragment.glsl";
+static const char *WAVE_FRAGMENT_SHADER = "wave.fragment.glsl";
 
-GLuint program;
-GLint attribute_coord2d;
+GLuint fft_program;
+GLuint wave_program;
+GLint fft_attr_coord2d;
+GLint wave_attr_coord2d;
 
 void spectrogramInit() {
-  program = create_program(VERTEX_SHADER, FRAGMENT_SHADER);
-  attribute_coord2d = get_attrib(program, "coord2d");
+  fft_program = create_program(FFT_VERTEX_SHADER, FFT_FRAGMENT_SHADER);
+  fft_attr_coord2d = get_attrib(fft_program, "coord2d");
+
+  wave_program = create_program(WAVE_VERTEX_SHADER, WAVE_FRAGMENT_SHADER);
+  wave_attr_coord2d = get_attrib(wave_program, "coord2d");
 }
 
-void spectrogramDisplay(double *labels, double *values, size_t n) {
-  std::vector<point> graph(n);
-
-  double maxLabel = 0, minLabel = 0;
-  for (size_t i = 0; i < n; i++) {
-    maxLabel = std::max(maxLabel, labels[i]);
-    minLabel = std::min(minLabel, labels[i]);
-  }
-  double labelSpan = maxLabel - minLabel;
-
-  for (size_t i = 0; i < n; i++) {
-    graph[i].x = 2 * (labels[i] / labelSpan - 0.5);
-    graph[i].y = values[i] / MAX_FFT_OUTPUT;
-  }
-
+static void display(std::vector<point> &graph, GLuint program,
+                    GLint attr_coord2d) {
   GLuint vbo;
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-  glBufferData(GL_ARRAY_BUFFER, sizeof(point) * n, graph.data(),
+  glBufferData(GL_ARRAY_BUFFER, sizeof(point) * graph.size(), graph.data(),
                GL_DYNAMIC_DRAW);
 
   glUseProgram(program);
 
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-  glEnableVertexAttribArray(attribute_coord2d);
-  glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(attr_coord2d);
+  glVertexAttribPointer(attr_coord2d, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
   glLineWidth(2.5);
-  glDrawArrays(GL_LINE_STRIP, 0, n);
+  glDrawArrays(GL_LINE_STRIP, 0, graph.size());
+}
+
+static double span(double *data, size_t n) {
+  double max = 0, min = 0;
+  for (size_t i = 0; i < n; i++) {
+    max = std::max(max, data[i]);
+    min = std::min(min, data[i]);
+  }
+  return max - min;
+}
+
+static std::vector<point> fftGraph(double *labels, double *values, size_t n) {
+  std::vector<point> graph(n);
+  double labelSpan = span(labels, n);
+  for (size_t i = 0; i < n; i++) {
+    graph[i].x = 2 * (labels[i] / labelSpan - 0.5);
+    graph[i].y = values[i] / MAX_FFT_OUTPUT;
+  }
+  return graph;
+}
+
+static std::vector<point> waveGraph(double *labels, double *values, size_t n) {
+  std::vector<point> graph(n);
+  double labelSpan = span(labels, n);
+  for (size_t i = 0; i < n; i++) {
+    graph[i].x = 2 * (labels[i] / labelSpan - 0.5);
+    graph[i].y = -0.5;
+  }
+  return graph;
+}
+
+void spectrogramDisplay(double *fftLabels, double *fftValues, size_t fftN,
+                        double *waveLabels, double *waveValues, size_t waveN) {
+  std::vector<point> fftData = fftGraph(fftLabels, fftValues, fftN);
+  display(fftData, fft_program, fft_attr_coord2d);
+
+  std::vector<point> waveGraphData = waveGraph(waveLabels, waveValues, waveN);
+  display(waveGraphData, wave_program, wave_attr_coord2d);
 }
