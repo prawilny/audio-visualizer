@@ -49,7 +49,7 @@ static SDL_AudioFormat format_from_mpg123(int encoding) {
   default:
     std::stringstream ss;
     ss << "mpg123 format not supported by SDL: " << encoding;
-    throw new std::runtime_error(ss.str());
+    throw std::runtime_error(ss.str());
   }
 }
 
@@ -69,7 +69,7 @@ std::unique_ptr<PCM_data> from_mp3(const char *filename) {
   if ((mh = mpg123_new(NULL, &err)) == NULL) {
     std::stringstream ss;
     ss << "mpg123 failed to open a new handle with error code: " << err;
-    throw new std::runtime_error(ss.str());
+    throw std::runtime_error(ss.str());
   }
 
   if (mpg123_open(mh, filename) != MPG123_OK
@@ -79,7 +79,7 @@ std::unique_ptr<PCM_data> from_mp3(const char *filename) {
     cleanup(mh);
     std::stringstream ss;
     ss << filename << " couldn't be read as a mp3 file.";
-    throw new std::runtime_error(ss.str());
+    throw std::runtime_error(ss.str());
   }
 
   /* Ensure that this output format will not change
@@ -103,7 +103,7 @@ std::unique_ptr<PCM_data> from_mp3(const char *filename) {
     ss << "Decoding ended prematurely because: "
        << (err == MPG123_ERR ? mpg123_strerror(mh)
                              : mpg123_plain_strerror(err));
-    throw new std::runtime_error(ss.str());
+    throw std::runtime_error(ss.str());
   }
 
   cleanup(mh);

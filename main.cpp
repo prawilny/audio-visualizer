@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <vector>
 
-const int TARGET_FPS = 10;
+const int TARGET_FPS = 25;
 
 static SDL_Window *window;
 static SDL_GLContext gl_context;
@@ -278,34 +278,39 @@ void draw_visualization() {
 }
 
 int main() {
-  set_up();
-  while (!done) {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-      ImGui_ImplSDL2_ProcessEvent(&event);
-      if (event.type == SDL_QUIT)
-        done = true;
-      if (event.type == SDL_WINDOWEVENT &&
-          event.window.event == SDL_WINDOWEVENT_CLOSE &&
-          event.window.windowID == SDL_GetWindowID(window))
-        done = true;
+  try {
+    set_up();
+    while (!done) {
+      SDL_Event event;
+      while (SDL_PollEvent(&event)) {
+        ImGui_ImplSDL2_ProcessEvent(&event);
+        if (event.type == SDL_QUIT)
+          done = true;
+        if (event.type == SDL_WINDOWEVENT &&
+            event.window.event == SDL_WINDOWEVENT_CLOSE &&
+            event.window.windowID == SDL_GetWindowID(window))
+          done = true;
 
-      if (!io->WantCaptureMouse || !io->WantCaptureKeyboard) {
-        // TODO: handle mouse or keyboard event if it's of appropriate type
+        if (!io->WantCaptureMouse || !io->WantCaptureKeyboard) {
+          // TODO: handle mouse or keyboard event if it's of appropriate type
+        }
       }
+
+      imgui_frame();
+
+      glViewport(0, 0, (int)io->DisplaySize.x, (int)io->DisplaySize.y);
+      glClearColor(0, 0, 0, 0);
+      glClear(GL_COLOR_BUFFER_BIT);
+
+      draw_visualization();
+      ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+      SDL_GL_SwapWindow(window);
     }
-
-    imgui_frame();
-
-    glViewport(0, 0, (int)io->DisplaySize.x, (int)io->DisplaySize.y);
-    glClearColor(0, 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    draw_visualization();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    SDL_GL_SwapWindow(window);
+    clean_up();
+  } catch (std::exception &e) {
+    std::cout << "error: " << e.what();
+    exit(1);
   }
-  clean_up();
 
   return 0;
 }

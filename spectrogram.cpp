@@ -20,7 +20,6 @@ GLint attribute_coord2d;
 void spectrogramInit() {
   program = create_program(VERTEX_SHADER, FRAGMENT_SHADER);
   attribute_coord2d = get_attrib(program, "coord2d");
-  glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 }
 
 void spectrogramDisplay(double *labels, double *values, size_t n) {
@@ -52,5 +51,6 @@ void spectrogramDisplay(double *labels, double *values, size_t n) {
   glEnableVertexAttribArray(attribute_coord2d);
   glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
+  glLineWidth(2.5);
   glDrawArrays(GL_LINE_STRIP, 0, n);
 }
