@@ -20,11 +20,16 @@
 #include <stdio.h>
 #include <vector>
 
+#define V2D 0
+#define V3D 1
+
 const int TARGET_FPS = 25;
 
 static SDL_Window *window;
 static SDL_GLContext gl_context;
 static ImGuiIO *io;
+
+static int selected_visualization = V2D;
 
 static const char *audio_types[1] = {"*.mp3"};
 static char *audio_name = nullptr;
@@ -107,7 +112,9 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
                bytes_to_be_copied, SDL_MIX_MAXVOLUME);
   audio_data->processed_bytes += bytes_to_be_copied;
 
-  // TODO: fill buffer and generate visualization data. How often should it be?
+  if (audio_data->processed_bytes == audio_data->bytes.size()) {
+    // TODO: stop_audio()
+  }
 }
 
 void start_audio() {
@@ -258,6 +265,10 @@ void imgui_frame() {
     ImGui::SameLine();
     ImGui::Text("Playback status: %s", audio_played ? "PLAY" : "PAUSE");
 
+    ImGui::RadioButton("2D", &selected_visualization, V2D);
+    ImGui::SameLine();
+    ImGui::RadioButton("3D", &selected_visualization, V3D);
+
     ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
 
     ImGui::End();
@@ -278,9 +289,13 @@ void draw_visualization() {
     std::vector<double> waveLabels(waveN);
     std::iota(waveLabels.begin(), waveLabels.end(), 0);
 
-    spectrogramDisplay(fftLabels.data(), plot_data.get()->data(), fftN,
-                       waveLabels.data(), plot_fft_input->data(), waveN,
-                       audio_data->format);
+    if (selected_visualization == V2D) {
+      spectrogramDisplay(fftLabels.data(), plot_data.get()->data(), fftN,
+                         waveLabels.data(), plot_fft_input->data(), waveN,
+                         audio_data->format);
+    } else if (selected_visualization == V3D) {
+      // TODO
+    }
   }
 }
 
