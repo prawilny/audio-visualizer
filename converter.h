@@ -14,6 +14,6 @@ struct PCM_data {
   size_t processed_bytes;
 };
 
-std::unique_ptr<PCM_data> from_mp3(const char *filename);
+PCM_data from_mp3(const char *filename);
 
 #endif // _AUDIO_VISUALIZER_CONVERTER_H_

@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <stdexcept>
 #include <stdio.h>
 #include <vector>
@@ -24,6 +25,7 @@
 #define V3D 1
 
 const int TARGET_FPS = 25;
+const int HISTORY_SIZE = 100;
 
 static SDL_Window *window;
 static SDL_GLContext gl_context;
@@ -36,12 +38,9 @@ static char *audio_name = nullptr;
 static bool audio_played = false;
 static bool done = false;
 
-// Needed for debugging.
-template class std::unique_ptr<PCM_data>;
-std::unique_ptr<PCM_data> audio_data;
-
-std::unique_ptr<std::vector<double>> plot_data;
-std::unique_ptr<std::vector<double>> plot_fft_input;
+std::optional<PCM_data> audio_data;
+std::vector<double> plot_data;
+std::vector<double> plot_fft_input;
 
 // TODO: make sure that visualization matches audio
 
@@ -70,17 +69,20 @@ double fromBytes(uint8_t *bytes, SDL_AudioFormat format) {
 std::vector<double> fft_samples(int num_bytes) {
   // We may have to merge samples of two channels and cast results to double.
 
-  size_t sample_byte_size = (SDL_AUDIO_MASK_BITSIZE & audio_data->format) / 8;
-  size_t num_samples = num_bytes / (sample_byte_size * audio_data->channels);
+  size_t sample_byte_size =
+      (SDL_AUDIO_MASK_BITSIZE & audio_data.value().format) / 8;
+  size_t num_samples =
+      num_bytes / (sample_byte_size * audio_data.value().channels);
 
   std::vector<double> result(num_samples, 0);
 
   size_t processed = 0;
   for (int i = 0; i < num_samples; i++) {
-    for (int ch = 0; ch < audio_data->channels; ch++) {
-      result[i] += (double)(fromBytes(
-          audio_data->bytes.data() + audio_data->processed_bytes + processed,
-          audio_data->format));
+    for (int ch = 0; ch < audio_data.value().channels; ch++) {
+      result[i] +=
+          (double)(fromBytes(audio_data.value().bytes.data() +
+                                 audio_data.value().processed_bytes + processed,
+                             audio_data.value().format));
       processed += sample_byte_size;
     }
   }
@@ -93,7 +95,7 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
   SDL_memset(stream, 0, len);
 
   size_t left_in_buffer =
-      audio_data->bytes.size() - audio_data->processed_bytes;
+      audio_data.value().bytes.size() - audio_data.value().processed_bytes;
   if (left_in_buffer == 0) {
     audio_played = false;
     return;
@@ -101,40 +103,40 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
 
   int bytes_to_be_copied = len < left_in_buffer ? len : left_in_buffer;
 
-  std::vector<double> fft_input = fft_samples(bytes_to_be_copied);
-  std::vector<double> *copied_input = new std::vector<double>();
-  *copied_input = fft_input;
-  plot_fft_input = std::unique_ptr<std::vector<double>>(copied_input);
+  plot_fft_input = fft_samples(bytes_to_be_copied);
+  plot_data = amplitudes_of_harmonics(plot_fft_input);
 
-  plot_data = amplitudes_of_harmonics(fft_input);
-
-  SDL_MixAudio(stream, audio_data->bytes.data() + audio_data->processed_bytes,
+  SDL_MixAudio(stream,
+               audio_data.value().bytes.data() +
+                   audio_data.value().processed_bytes,
                bytes_to_be_copied, SDL_MIX_MAXVOLUME);
-  audio_data->processed_bytes += bytes_to_be_copied;
+  audio_data.value().processed_bytes += bytes_to_be_copied;
 
-  if (audio_data->processed_bytes == audio_data->bytes.size()) {
+  if (audio_data.value().processed_bytes == audio_data.value().bytes.size()) {
     // TODO: stop_audio()
   }
 }
 
 void start_audio() {
-  if (audio_played || audio_data.get() == nullptr) {
+  if (audio_played || !audio_data.has_value()) {
     return;
   }
 
-  uint8_t sample_byte_size = (audio_data->format & SDL_AUDIO_MASK_BITSIZE) / 8;
+  uint8_t sample_byte_size =
+      (audio_data.value().format & SDL_AUDIO_MASK_BITSIZE) / 8;
 
   if (sample_byte_size > 1) {
-    audio_data->processed_bytes -=
-        audio_data->processed_bytes % sample_byte_size;
+    audio_data.value().processed_bytes -=
+        audio_data.value().processed_bytes % sample_byte_size;
   }
 
   SDL_AudioSpec wanted_spec;
-  wanted_spec.freq = audio_data->rate;
-  wanted_spec.format = audio_data->format;
-  wanted_spec.channels = audio_data->channels;
+  wanted_spec.freq = audio_data.value().rate;
+  wanted_spec.format = audio_data.value().format;
+  wanted_spec.channels = audio_data.value().channels;
   wanted_spec.silence = 0;
-  wanted_spec.size = audio_data->bytes.size() - audio_data->processed_bytes;
+  wanted_spec.size =
+      audio_data.value().bytes.size() - audio_data.value().processed_bytes;
   wanted_spec.samples = wanted_spec.freq / TARGET_FPS;
   wanted_spec.samples -=
       wanted_spec.samples % wanted_spec.channels; // Aligning to 0 % channels
@@ -174,7 +176,7 @@ void select_file() {
   }
 
   try {
-    audio_data = from_mp3(new_audio_name);
+    audio_data = std::optional(from_mp3(new_audio_name));
     audio_name = new_audio_name;
   } catch (...) {
     std::cout << "Error reading or opening file " << new_audio_name
@@ -278,21 +280,21 @@ void imgui_frame() {
 }
 
 void draw_visualization() {
-  if (plot_data.get() != nullptr) {
-    size_t fftN = plot_data.get()->size();
+  if (plot_data.size() != 0) { // TODO: fix
+    size_t fftN = plot_data.size();
     std::vector<double> fftLabels(fftN);
     for (size_t i = 0; i < fftN; i++) {
       fftLabels[i] = i * TARGET_FPS;
     }
 
-    size_t waveN = plot_fft_input.get()->size();
+    size_t waveN = plot_fft_input.size();
     std::vector<double> waveLabels(waveN);
     std::iota(waveLabels.begin(), waveLabels.end(), 0);
 
     if (selected_visualization == V2D) {
-      spectrogramDisplay(fftLabels.data(), plot_data.get()->data(), fftN,
-                         waveLabels.data(), plot_fft_input->data(), waveN,
-                         audio_data->format);
+      spectrogramDisplay(fftLabels.data(), plot_data.data(), fftN,
+                         waveLabels.data(), plot_fft_input.data(), waveN,
+                         audio_data.value().format);
     } else if (selected_visualization == V3D) {
       // TODO
     }

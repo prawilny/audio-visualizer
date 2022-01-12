@@ -15,8 +15,7 @@
 // TODO: the layout of data is: SAMPLE_LEFT || SAMPLE_RIGHT || SAMPLE_LEFT ||
 // SAMPLE_RIGHT... What value should we use: sum/average? max?
 
-std::unique_ptr<std::vector<double>>
-amplitudes_of_harmonics(std::vector<double> &wave_values) {
+std::vector<double> amplitudes_of_harmonics(std::vector<double> &wave_values) {
   size_t n = wave_values.size();
 
   fftw_complex *out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * n);
@@ -31,10 +30,9 @@ amplitudes_of_harmonics(std::vector<double> &wave_values) {
   fftw_execute(plan);
   fftw_destroy_plan(plan);
 
-  std::unique_ptr<std::vector<double>> result =
-      std::make_unique<std::vector<double>>(n / 2, 0);
+  std::vector<double> result = std::vector<double>(n / 2, 0);
   for (size_t i = 0; i < n / 2; i++) {
-    (*result)[i] =
+    result[i] =
         sqrt(out[i][RE_IDX] * out[i][RE_IDX] + out[i][IM_IDX] * out[i][IM_IDX]);
   }
 

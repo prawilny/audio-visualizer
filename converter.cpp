@@ -53,8 +53,8 @@ static SDL_AudioFormat format_from_mpg123(int encoding) {
   }
 }
 
-std::unique_ptr<PCM_data> from_mp3(const char *filename) {
-  std::unique_ptr<PCM_data> result = std::make_unique<PCM_data>();
+PCM_data from_mp3(const char *filename) {
+  PCM_data result;
   int encoding;
 
   int err = MPG123_OK;
@@ -74,7 +74,7 @@ std::unique_ptr<PCM_data> from_mp3(const char *filename) {
 
   if (mpg123_open(mh, filename) != MPG123_OK
       /* Peek into track and get first output format. */
-      || mpg123_getformat(mh, &result->rate, &result->channels, &encoding) !=
+      || mpg123_getformat(mh, &result.rate, &result.channels, &encoding) !=
              MPG123_OK) {
     cleanup(mh);
     std::stringstream ss;
@@ -85,7 +85,7 @@ std::unique_ptr<PCM_data> from_mp3(const char *filename) {
   /* Ensure that this output format will not change
      (it might, when we allow it). */
   mpg123_format_none(mh);
-  mpg123_format(mh, result->rate, result->channels, encoding);
+  mpg123_format(mh, result.rate, result.channels, encoding);
 
   size_t buffer_size = mpg123_outblock(mh);
   std::vector<uint8_t> buffer(buffer_size, 0);
@@ -93,8 +93,8 @@ std::unique_ptr<PCM_data> from_mp3(const char *filename) {
   size_t buffer_read;
   do {
     err = mpg123_read(mh, buffer.data(), buffer_size, &buffer_read);
-    result->bytes.insert(result->bytes.end(), buffer.begin(),
-                         buffer.begin() + buffer_read);
+    result.bytes.insert(result.bytes.end(), buffer.begin(),
+                        buffer.begin() + buffer_read);
   } while (buffer_read && err == MPG123_OK);
 
   if (err != MPG123_DONE) {
@@ -108,10 +108,10 @@ std::unique_ptr<PCM_data> from_mp3(const char *filename) {
 
   cleanup(mh);
 
-  result->format = format_from_mpg123(encoding);
-  result->processed_bytes = 0;
+  result.format = format_from_mpg123(encoding);
+  result.processed_bytes = 0;
 
-  assert(result->channels == 1 || result->channels == 2);
-  assert(result->rate > 0);
+  assert(result.channels == 1 || result.channels == 2);
+  assert(result.rate > 0);
   return result;
 }
