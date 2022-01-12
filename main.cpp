@@ -5,6 +5,7 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl.h"
 #include "implot.h"
+#include "plot3d.h"
 #include "spectrogram.h"
 #include "tinyfiledialogs.h"
 #include <SDL.h>
@@ -105,7 +106,13 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
   int bytes_to_be_copied = len < left_in_buffer ? len : left_in_buffer;
 
   plot_fft_input.push_front(fft_samples(bytes_to_be_copied));
+  if (plot_fft_input.size() > HISTORY_SIZE) {
+    plot_fft_input.resize(HISTORY_SIZE);
+  }
   plot_data.push_front(amplitudes_of_harmonics(plot_fft_input.front()));
+  if (plot_data.size() > HISTORY_SIZE) {
+    plot_data.resize(HISTORY_SIZE);
+  }
 
   SDL_MixAudio(stream,
                audio_data.value().bytes.data() +
@@ -234,6 +241,7 @@ void set_up() {
   ImGui_ImplOpenGL3_Init(glsl_version);
 
   spectrogramInit();
+  plot3dInit();
 }
 
 void clean_up() {
@@ -282,22 +290,25 @@ void imgui_frame() {
 
 void draw_visualization() {
   if (plot_data.size() != 0) {
-    size_t fftN = plot_data.front().size();
+    size_t fftN = 0;
+    for (auto &data : plot_data) {
+      fftN = std::max(fftN, data.size());
+    }
     std::vector<double> fftLabels(fftN);
     for (size_t i = 0; i < fftN; i++) {
       fftLabels[i] = i * TARGET_FPS;
     }
 
-    size_t waveN = plot_fft_input.front().size();
-    std::vector<double> waveLabels(waveN);
-    std::iota(waveLabels.begin(), waveLabels.end(), 0);
-
     if (selected_visualization == V2D) {
+      size_t waveN = plot_fft_input.front().size();
+      std::vector<double> waveLabels(waveN);
+      std::iota(waveLabels.begin(), waveLabels.end(), 0);
+
       spectrogramDisplay(fftLabels.data(), plot_data.front().data(), fftN,
                          waveLabels.data(), plot_fft_input.front().data(),
                          waveN, audio_data.value().format);
     } else if (selected_visualization == V3D) {
-      // TODO
+      plot3dDisplay(fftLabels, plot_data, audio_data.value().format);
     }
   }
 }
