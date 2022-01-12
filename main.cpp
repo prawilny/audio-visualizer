@@ -11,6 +11,7 @@
 #include <SDL_audio.h>
 #include <SDL_opengl.h>
 #include <cassert>
+#include <deque>
 #include <exception>
 #include <fmt123.h>
 #include <iostream>
@@ -39,8 +40,8 @@ static bool audio_played = false;
 static bool done = false;
 
 std::optional<PCM_data> audio_data;
-std::vector<double> plot_data;
-std::vector<double> plot_fft_input;
+std::deque<std::vector<double>> plot_data;
+std::deque<std::vector<double>> plot_fft_input;
 
 // TODO: make sure that visualization matches audio
 
@@ -103,8 +104,8 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
 
   int bytes_to_be_copied = len < left_in_buffer ? len : left_in_buffer;
 
-  plot_fft_input = fft_samples(bytes_to_be_copied);
-  plot_data = amplitudes_of_harmonics(plot_fft_input);
+  plot_fft_input.push_front(fft_samples(bytes_to_be_copied));
+  plot_data.push_front(amplitudes_of_harmonics(plot_fft_input.front()));
 
   SDL_MixAudio(stream,
                audio_data.value().bytes.data() +
@@ -280,21 +281,21 @@ void imgui_frame() {
 }
 
 void draw_visualization() {
-  if (plot_data.size() != 0) { // TODO: fix
-    size_t fftN = plot_data.size();
+  if (plot_data.size() != 0) {
+    size_t fftN = plot_data.front().size();
     std::vector<double> fftLabels(fftN);
     for (size_t i = 0; i < fftN; i++) {
       fftLabels[i] = i * TARGET_FPS;
     }
 
-    size_t waveN = plot_fft_input.size();
+    size_t waveN = plot_fft_input.front().size();
     std::vector<double> waveLabels(waveN);
     std::iota(waveLabels.begin(), waveLabels.end(), 0);
 
     if (selected_visualization == V2D) {
-      spectrogramDisplay(fftLabels.data(), plot_data.data(), fftN,
-                         waveLabels.data(), plot_fft_input.data(), waveN,
-                         audio_data.value().format);
+      spectrogramDisplay(fftLabels.data(), plot_data.front().data(), fftN,
+                         waveLabels.data(), plot_fft_input.front().data(),
+                         waveN, audio_data.value().format);
     } else if (selected_visualization == V3D) {
       // TODO
     }
