@@ -19,10 +19,10 @@ static const char *WAVE_VERTEX_SHADER = "wave.vertex.glsl";
 static const char *FFT_FRAGMENT_SHADER = "fft.fragment.glsl";
 static const char *WAVE_FRAGMENT_SHADER = "wave.fragment.glsl";
 
-GLuint fft_program;
-GLuint wave_program;
-GLint fft_attr_coord2d;
-GLint wave_attr_coord2d;
+static GLuint fft_program;
+static GLuint wave_program;
+static GLint fft_attr_coord2d;
+static GLint wave_attr_coord2d;
 
 void spectrogramInit() {
   fft_program = create_program(FFT_VERTEX_SHADER, FFT_FRAGMENT_SHADER);
