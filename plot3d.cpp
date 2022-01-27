@@ -1,16 +1,9 @@
 #include "plot3d.h"
-#include <math.h>
-#include <stdexcept>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <SDL.h>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include "shader_utils.h"
+#include <SDL.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <stdexcept>
 
 static const char *VERTEX_SHADER = "plot3d.vertex.glsl";
 static const char *FRAGMENT_SHADER = "plot3d.fragment.glsl";
