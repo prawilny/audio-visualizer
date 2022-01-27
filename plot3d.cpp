@@ -18,17 +18,6 @@ static const char *FRAGMENT_SHADER = "plot3d.fragment.glsl";
 static GLuint program;
 static GLint attribute_coord2d;
 static GLint uniform_vertex_transform;
-static GLint uniform_texture_transform;
-static GLuint texture_id;
-static GLint uniform_mytexture;
-
-static float offset_x = 0.0;
-static float offset_y = 0.0;
-static float scale = 1.0;
-
-static bool interpolate = false;
-static bool clamp = false;
-static bool rotate = false;
 
 static GLuint vbo[2];
 
@@ -40,11 +29,8 @@ void plot3dInit() {
 
   attribute_coord2d = get_attrib(program, "coord2d");
   uniform_vertex_transform = get_uniform(program, "vertex_transform");
-  uniform_texture_transform = get_uniform(program, "texture_transform");
-  uniform_mytexture = get_uniform(program, "mytexture");
 
-  if (attribute_coord2d == -1 || uniform_vertex_transform == -1 ||
-      uniform_texture_transform == -1 || uniform_mytexture == -1) {
+  if (attribute_coord2d == -1 || uniform_vertex_transform == -1) {
     throw std::runtime_error("couldnt't get attribute");
   }
 }
@@ -52,28 +38,6 @@ void plot3dInit() {
 void plot3dDisplay(const std::vector<double> &fftLabels,
                    const std::deque<std::vector<double>> &fftValues,
                    SDL_AudioFormat fmt) {
-  // Create our datapoints, store it as bytes
-#define N 256
-  GLbyte graph[N][N];
-
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
-      float x = (i - N / 2) / (N / 2.0);
-      float y = (j - N / 2) / (N / 2.0);
-      float d = hypotf(x, y) * 4.0;
-      float z = (1 - d * d) * expf(d * d / -2.0);
-
-      graph[i][j] = roundf(z * 127 + 128);
-    }
-  }
-
-  /* Upload the texture with our datapoints */
-  glActiveTexture(GL_TEXTURE0);
-  glGenTextures(1, &texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, N, N, 0, GL_LUMINANCE,
-               GL_UNSIGNED_BYTE, graph);
-
   // Create two vertex buffer objects
   glGenBuffers(2, vbo);
 
@@ -114,18 +78,10 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices, indices,
                GL_STATIC_DRAW);
 
-
   glUseProgram(program);
-  glUniform1i(uniform_mytexture, 0);
 
   glm::mat4 model;
-
-  if (rotate)
-    model = glm::rotate(glm::mat4(1.0f), glm::radians(SDL_GetTicks() / 100.0f),
-                        glm::vec3(0.0f, 0.0f, 1.0f));
-
-  else
-    model = glm::mat4(1.0f);
+  model = glm::mat4(1.0f);
 
   glm::mat4 view =
       glm::lookAt(glm::vec3(0.0, -2.0, 2.0), glm::vec3(0.0, 0.0, 0.0),
@@ -133,29 +89,12 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glm::mat4 projection = glm::perspective(45.0f, 1.0f * 640 / 480, 0.1f, 10.0f);
 
   glm::mat4 vertex_transform = projection * view * model;
-  glm::mat4 texture_transform =
-      glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, 1)),
-                     glm::vec3(offset_x, offset_y, 0));
 
   glUniformMatrix4fv(uniform_vertex_transform, 1, GL_FALSE,
                      glm::value_ptr(vertex_transform));
-  glUniformMatrix4fv(uniform_texture_transform, 1, GL_FALSE,
-                     glm::value_ptr(texture_transform));
 
   glClearColor(0.0, 0.0, 0.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT);
-
-  /* Set texture wrapping mode */
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                  clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                  clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-
-  /* Set texture interpolation mode */
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  interpolate ? GL_LINEAR : GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                  interpolate ? GL_LINEAR : GL_NEAREST);
 
   /* Draw the grid using the indices to our vertices using our vertex buffer
    * objects */
