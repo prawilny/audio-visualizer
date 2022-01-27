@@ -1,3 +1,4 @@
+#include "SDL_events.h"
 #include "converter.h"
 #include "fft.h"
 #include "gl.h"
@@ -164,8 +165,6 @@ void stop_audio() {
   if (!audio_played) {
     return;
   }
-  plot_data.clear();
-  plot_fft_input.clear();
 
   SDL_LockAudio();
   SDL_PauseAudio(1);
@@ -184,6 +183,9 @@ void select_file() {
   if (new_audio_name == nullptr) {
     return;
   }
+
+  plot_data.clear();
+  plot_fft_input.clear();
 
   try {
     audio_data = std::optional(from_mp3(new_audio_name));
@@ -335,8 +337,9 @@ int main() {
             event.window.windowID == SDL_GetWindowID(window))
           done = true;
 
-        if (!io->WantCaptureMouse || !io->WantCaptureKeyboard) {
-          // TODO: handle mouse or keyboard event if it's of appropriate type
+        if (event.type == SDL_KEYDOWN && !io->WantCaptureKeyboard &&
+            selected_visualization == V3D) {
+              plot3dHandleKeyEvent(event.key);
         }
       }
 

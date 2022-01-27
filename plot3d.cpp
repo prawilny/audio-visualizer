@@ -1,8 +1,10 @@
 #include "plot3d.h"
+#include "SDL_scancode.h"
 #include "fft.h"
 #include "plot_utils.h"
 #include "shader_utils.h"
 #include <SDL.h>
+#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
@@ -15,6 +17,18 @@ static GLint attribute_coord3d;
 static GLint uniform_vertex_transform;
 
 static GLuint vbo[2];
+
+static struct {
+  const float r = 1.5;
+  float inclination = 45.0;
+  float azimuth = 0.0;
+} eye;
+
+static glm::vec3 eye_from_angles() {
+  return glm::vec3(eye.r * cos(eye.azimuth) * sin(eye.inclination),
+                   eye.r * cos(eye.inclination),
+                   eye.r * sin(eye.azimuth) * sin(eye.inclination));
+}
 
 void plot3dInit() {
   program = create_program(VERTEX_SHADER, FRAGMENT_SHADER);
@@ -60,15 +74,15 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   GLushort indices[num_indices];
   int idx = 0;
 
-  for (int i = 0; i < M; i++) {
-    for (int j = 0; j < N - 1; j++) {
+  for (int i = 0; i < M - 1; i++) {
+    for (int j = 0; j < N; j++) {
       indices[idx++] = i * N + j;
       indices[idx++] = i * N + j + 1;
     }
   }
 
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < M - 1; j++) {
+  for (int i = 0; i < N - 1; i++) {
+    for (int j = 0; j < M; j++) {
       indices[idx++] = i * M + j;
       indices[idx++] = (i + 1) * M + j;
     }
@@ -81,13 +95,12 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glUseProgram(program);
 
   glm::mat4 model = glm::mat4(1.0f);
-  // glm::mat4 view =
-  //     glm::lookAt(glm::vec3(0.0, -2.0, 2.0), glm::vec3(0.0, 0.0, 0.0),
-  //                 glm::vec3(0.0, 0.0, 1.0));
-  // glm::mat4 projection = glm::perspective(45.0f, 1.0f, 0.1f, 10.0f);
-  // glm::mat4 vertex_transform = projection * view * model;
+  glm::mat4 view = glm::lookAt(eye_from_angles(), glm::vec3(0.0, 0.0, 0.0),
+                               glm::vec3(0.0, 1.0, 0.0));
+  glm::mat4 projection = glm::perspective(45.0f, 1.0f, 0.1f, 5.0f);
+  glm::mat4 vertex_transform = projection * view * model;
   glUniformMatrix4fv(uniform_vertex_transform, 1, GL_FALSE,
-                     glm::value_ptr(model));
+                     glm::value_ptr(vertex_transform));
 
   /* Draw the grid using the indices to our vertices using our vertex buffer
    * objects */
@@ -103,4 +116,24 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glDisableVertexAttribArray(attribute_coord3d);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void plot3dHandleKeyEvent(const SDL_KeyboardEvent &event) {
+  float delta = glm::radians(1.0);
+  switch (event.keysym.scancode) {
+  case SDL_SCANCODE_LEFT:
+    eye.azimuth -= delta;
+    break;
+  case SDL_SCANCODE_RIGHT:
+    eye.azimuth += delta;
+    break;
+  case SDL_SCANCODE_UP:
+    eye.inclination -= delta;
+    break;
+  case SDL_SCANCODE_DOWN:
+    eye.inclination += delta;
+    break;
+  default:
+    break;
+  }
 }
