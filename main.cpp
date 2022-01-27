@@ -316,6 +316,12 @@ void draw_visualization() {
 int main() {
   try {
     set_up();
+
+    // TODO: remove
+    select_file();
+    toggle_playback();
+    selected_visualization = V3D;
+
     while (!done) {
       SDL_Event event;
       while (SDL_PollEvent(&event)) {
