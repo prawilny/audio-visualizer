@@ -19,7 +19,7 @@ static GLint uniform_vertex_transform;
 static GLuint vbo[2];
 
 static struct {
-  const float r = 1.5;
+  const float r = 4;
   float inclination = 45.0;
   float azimuth = 0.0;
 } eye;
@@ -58,9 +58,9 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glm::vec3 vertices[N][M];
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < M; j++) {
-      vertices[i][j].x = 2 * (fftLabels[i] / labelSpan - 0.5);
-      vertices[i][j].y = 2 * (fftValues[j][i] / MAX_FFT_OUTPUT - 0.5);
-      vertices[i][j].z = 2 * (j / M - 0.5);
+      vertices[i][j].x = 2.0 * fftLabels[i] / labelSpan - 1.0;
+      vertices[i][j].y = 2.0 * fftValues[j][i] / MAX_FFT_OUTPUT - 1.0;
+      vertices[i][j].z = 2.0 * j / M - 1.0;
     }
   }
 
@@ -97,7 +97,7 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glm::mat4 model = glm::mat4(1.0f);
   glm::mat4 view = glm::lookAt(eye_from_angles(), glm::vec3(0.0, 0.0, 0.0),
                                glm::vec3(0.0, 1.0, 0.0));
-  glm::mat4 projection = glm::perspective(45.0f, 1.0f, 0.1f, 5.0f);
+  glm::mat4 projection = glm::perspective(45.0f, 1.0f, 0.1f, 10.0f);
   glm::mat4 vertex_transform = projection * view * model;
   glUniformMatrix4fv(uniform_vertex_transform, 1, GL_FALSE,
                      glm::value_ptr(vertex_transform));
