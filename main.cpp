@@ -164,6 +164,8 @@ void stop_audio() {
   if (!audio_played) {
     return;
   }
+  plot_data.clear();
+  plot_fft_input.clear();
 
   SDL_LockAudio();
   SDL_PauseAudio(1);

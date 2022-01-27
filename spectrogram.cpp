@@ -2,6 +2,7 @@
 #include "SDL_audio.h"
 #include "fft.h"
 #include "gl.h"
+#include "plot_utils.h"
 #include "shader_utils.h"
 #include <SDL_opengl.h>
 #include <limits>
@@ -50,15 +51,6 @@ static void display(std::vector<point> &graph, GLuint program,
   glDrawArrays(GL_LINE_STRIP, 0, graph.size());
 }
 
-static double span(double *data, size_t n) {
-  double max = 0, min = 0;
-  for (size_t i = 0; i < n; i++) {
-    max = std::max(max, data[i]);
-    min = std::min(min, data[i]);
-  }
-  return max - min;
-}
-
 static std::vector<point> fftGraph(double *labels, double *values, size_t n) {
   std::vector<point> graph(n);
   double labelSpan = span(labels, n);
@@ -67,23 +59,6 @@ static std::vector<point> fftGraph(double *labels, double *values, size_t n) {
     graph[i].y = values[i] / MAX_FFT_OUTPUT;
   }
   return graph;
-}
-
-static double scaleY(double y, SDL_AudioFormat format) {
-  switch (format) {
-  case AUDIO_S8:
-    return y / std::numeric_limits<int8_t>::max();
-  case AUDIO_S16:
-    return y / std::numeric_limits<int16_t>::max();
-  case AUDIO_S32:
-    return y / std::numeric_limits<int32_t>::max();
-  case AUDIO_U8:
-    return y / (std::numeric_limits<uint8_t>::max() / 2) - 1;
-  case AUDIO_U16:
-    return y / (std::numeric_limits<uint16_t>::max() / 2) - 1;
-  default:
-    throw std::runtime_error("scaleY: unsupported audio format");
-  }
 }
 
 static std::vector<point> waveGraph(double *labels, double *values, size_t n,

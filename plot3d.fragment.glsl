@@ -1,5 +1,7 @@
-varying vec4 graph_coord;
+varying vec3 model_coord;
 
 void main(void) {
-	gl_FragColor = graph_coord / 2.0 + 0.5;
+	float frac = model_coord.y;
+	vec3 color = vec3(5 * frac, (1.0 - frac), 0);
+	gl_FragColor = vec4(color, model_coord.z);
 }
