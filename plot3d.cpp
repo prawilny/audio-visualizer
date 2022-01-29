@@ -12,6 +12,8 @@
 static const char *VERTEX_SHADER = "plot3d.vertex.glsl";
 static const char *FRAGMENT_SHADER = "plot3d.fragment.glsl";
 
+static const float SQRT_MAX_FFT_OUTPUT = sqrt(MAX_FFT_OUTPUT);
+
 static GLuint program;
 static GLint attribute_coord3d;
 static GLint uniform_vertex_transform;
@@ -61,7 +63,8 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < M; j++) {
       vertices[i][j].x = 2.0 * fftLabels[i] / labelSpan - 1.0;
-      vertices[i][j].y = 2.0 * fftValues[j][i] / MAX_FFT_OUTPUT - 1.0;
+      vertices[i][j].y =
+          2.0 * sqrt(fftValues[j][i]) / SQRT_MAX_FFT_OUTPUT - 1.0;
       vertices[i][j].z = 2.0 * j / M - 1.0;
     }
   }
