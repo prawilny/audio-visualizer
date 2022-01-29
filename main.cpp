@@ -27,8 +27,8 @@
 #define V2D 0
 #define V3D 1
 
-const int TARGET_FPS = 25;
-const int HISTORY_SIZE = 100;
+const int TARGET_FPS = 60;
+const int HISTORY_SIZE = 5 * TARGET_FPS;
 
 static SDL_Window *window;
 static SDL_GLContext gl_context;
@@ -40,6 +40,7 @@ static const char *audio_types[1] = {"*.mp3"};
 static char *audio_name = nullptr;
 static bool audio_played = false;
 static bool done = false;
+static bool audio_finished = false;
 
 std::optional<PCM_data> audio_data;
 std::deque<std::vector<double>> plot_data;
@@ -122,12 +123,12 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
   audio_data.value().processed_bytes += bytes_to_be_copied;
 
   if (audio_data.value().processed_bytes == audio_data.value().bytes.size()) {
-    // TODO: stop_audio()
+    audio_finished = true;
   }
 }
 
 void start_audio() {
-  if (audio_played || !audio_data.has_value()) {
+  if (audio_played || !audio_data.has_value() || audio_name == nullptr) {
     return;
   }
 
@@ -259,6 +260,20 @@ void clean_up() {
   SDL_Quit();
 }
 
+void set_audio_position(int seconds) {
+  bool audio_played_at_start = audio_played;
+
+  if (audio_played_at_start) {
+    stop_audio();
+  }
+  audio_data->processed_bytes =
+      seconds * audio_data->rate * audio_data->channels * 2;
+
+  if (audio_played_at_start) {
+    start_audio();
+  }
+}
+
 void imgui_frame() {
   // Start the Dear ImGui frame
   ImGui_ImplOpenGL3_NewFrame();
@@ -286,6 +301,17 @@ void imgui_frame() {
 
     ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
 
+    char label[12];
+    int seconds_now = audio_data->processed_bytes /
+                      (audio_data->rate * audio_data->channels) / 2;
+    int seconds_all = audio_data->bytes.size() /
+                      (audio_data->rate * audio_data->channels) / 2;
+    sprintf(label, "%02d:%02d/%02d:%02d", seconds_now / 60, seconds_now % 60,
+            seconds_all / 60, seconds_all % 60);
+    int seconds_slider = seconds_now;
+    if (ImGui::SliderInt(label, &seconds_slider, 0, seconds_all, "")) {
+      set_audio_position(seconds_slider);
+    }
     ImGui::End();
   }
   // Rendering
@@ -327,6 +353,14 @@ int main() {
     selected_visualization = V3D;
 
     while (!done) {
+      if (audio_finished) {
+        stop_audio();
+        audio_name = nullptr;
+        audio_finished = false;
+        plot_data.clear();
+        plot_fft_input.clear();
+      }
+
       SDL_Event event;
       while (SDL_PollEvent(&event)) {
         ImGui_ImplSDL2_ProcessEvent(&event);
@@ -339,7 +373,7 @@ int main() {
 
         if (event.type == SDL_KEYDOWN && !io->WantCaptureKeyboard &&
             selected_visualization == V3D) {
-              plot3dHandleKeyEvent(event.key);
+          plot3dHandleKeyEvent(event.key);
         }
       }
 

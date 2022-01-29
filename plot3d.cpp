@@ -86,11 +86,6 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
 
   glPointSize(4);
   glDrawArrays(GL_POINTS, vbo, M * N);
-
-  /* Stop using the vertex buffer object */
-  glDisableVertexAttribArray(attribute_coord3d);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void plot3dHandleKeyEvent(const SDL_KeyboardEvent &event) {
