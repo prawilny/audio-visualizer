@@ -19,15 +19,17 @@ static GLint uniform_vertex_transform;
 static GLuint vbo[2];
 
 static struct {
-  const float r = 4;
+  const float r = 3;
   float inclination = 45.0;
   float azimuth = 0.0;
 } eye;
 
 static glm::vec3 eye_from_angles() {
-  return glm::vec3(eye.r * cos(eye.azimuth) * sin(eye.inclination),
-                   eye.r * cos(eye.inclination),
-                   eye.r * sin(eye.azimuth) * sin(eye.inclination));
+  float azimuth_rads = glm::radians(eye.azimuth);
+  float inclination_rads = glm::radians(eye.inclination);
+  return glm::vec3(eye.r * cos(azimuth_rads) * sin(inclination_rads),
+                   eye.r * cos(inclination_rads),
+                   eye.r * sin(azimuth_rads) * sin(inclination_rads));
 }
 
 void plot3dInit() {
@@ -119,7 +121,7 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
 }
 
 void plot3dHandleKeyEvent(const SDL_KeyboardEvent &event) {
-  float delta = glm::radians(1.0);
+  float delta = 3.0;
   switch (event.keysym.scancode) {
   case SDL_SCANCODE_LEFT:
     eye.azimuth -= delta;
@@ -129,9 +131,15 @@ void plot3dHandleKeyEvent(const SDL_KeyboardEvent &event) {
     break;
   case SDL_SCANCODE_UP:
     eye.inclination -= delta;
+    if (eye.inclination <= 0.0) {
+      eye.inclination += delta;
+    }
     break;
   case SDL_SCANCODE_DOWN:
     eye.inclination += delta;
+    if (eye.inclination >= 180.0) {
+      eye.inclination -= delta;
+    }
     break;
   default:
     break;
