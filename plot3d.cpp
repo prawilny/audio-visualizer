@@ -19,8 +19,10 @@ static GLint attribute_coord3d;
 static GLint uniform_vertex_transform;
 static GLuint vbo;
 
+static const float DRAW_DISTANCE = 10.0;
+
 static struct {
-  const float r = 3;
+  float r = 3;
   float inclination = 45.0;
   float azimuth = 0.0;
 } eye;
@@ -74,7 +76,7 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glm::mat4 model = glm::mat4(1.0f);
   glm::mat4 view = glm::lookAt(eye_from_angles(), glm::vec3(0.0, 0.0, 0.0),
                                glm::vec3(0.0, 1.0, 0.0));
-  glm::mat4 projection = glm::perspective(45.0f, 1.0f, 0.1f, 10.0f);
+  glm::mat4 projection = glm::perspective(45.0f, 1.0f, 0.1f, DRAW_DISTANCE);
   glm::mat4 vertex_transform = projection * view * model;
   glUniformMatrix4fv(uniform_vertex_transform, 1, GL_FALSE,
                      glm::value_ptr(vertex_transform));
@@ -89,24 +91,36 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
 }
 
 void plot3dHandleKeyEvent(const SDL_KeyboardEvent &event) {
-  float delta = 3.0;
+  float deltaDegs = 3.0;
+  float deltaDistance = 0.05;
   switch (event.keysym.scancode) {
   case SDL_SCANCODE_LEFT:
-    eye.azimuth -= delta;
+    eye.azimuth -= deltaDegs;
     break;
   case SDL_SCANCODE_RIGHT:
-    eye.azimuth += delta;
+    eye.azimuth += deltaDegs;
     break;
   case SDL_SCANCODE_UP:
-    eye.inclination -= delta;
+    eye.inclination -= deltaDegs;
     if (eye.inclination <= 0.0) {
-      eye.inclination += delta;
+      eye.inclination += deltaDegs;
     }
     break;
   case SDL_SCANCODE_DOWN:
-    eye.inclination += delta;
+    eye.inclination += deltaDegs;
     if (eye.inclination >= 180.0) {
-      eye.inclination -= delta;
+      eye.inclination -= deltaDegs;
+    }
+    break;
+  case SDL_SCANCODE_EQUALS:
+    if (eye.r > deltaDistance) {
+      eye.r -= deltaDistance;
+    }
+    break;
+  case SDL_SCANCODE_MINUS:
+    eye.r += deltaDistance;
+    if (eye.r > DRAW_DISTANCE - 2.0) {
+      eye.r -= deltaDistance;
     }
     break;
   default:
