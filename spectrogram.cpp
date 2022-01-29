@@ -2,10 +2,12 @@
 #include "SDL_audio.h"
 #include "fft.h"
 #include "gl.h"
+#include "global.h"
 #include "plot_utils.h"
 #include "shader_utils.h"
 #include <SDL_opengl.h>
 #include <limits>
+#include <mutex>
 #include <stdexcept>
 #include <vector>
 
@@ -83,5 +85,6 @@ void spectrogramDisplay(double *fftLabels, double *fftValues, size_t fftN,
 
   std::vector<point> waveGraphData =
       waveGraph(waveLabels, waveValues, waveN, format);
+  big_lock.unlock();
   display(waveGraphData, wave_program, wave_attr_coord2d);
 }

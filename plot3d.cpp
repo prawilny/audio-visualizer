@@ -1,12 +1,15 @@
 #include "plot3d.h"
 #include "SDL_scancode.h"
 #include "fft.h"
+#include "global.h"
 #include "plot_utils.h"
 #include "shader_utils.h"
 #include <SDL.h>
 #include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <iostream>
+#include <mutex>
 #include <stdexcept>
 
 static const char *VERTEX_SHADER = "plot3d.vertex.glsl";
@@ -49,14 +52,23 @@ void plot3dInit() {
   }
 }
 
+// static int i = 0;
+
 void plot3dDisplay(const std::vector<double> &fftLabels,
                    const std::deque<std::vector<double>> &fftValues,
                    SDL_AudioFormat fmt) {
   const size_t N = fftLabels.size();
+  for (auto fftValueVector : fftValues) {
+    if (fftValueVector.size() != N) {
+      throw std::runtime_error("sizes should be equal!");
+    }
+  }
   const size_t M = fftValues.size();
   const double labelSpan = span(fftLabels.data(), fftLabels.size());
 
   glGenBuffers(1, &vbo);
+
+  // std::vector<float> ys;
 
   glm::vec3 vertices[N][M];
   for (int i = 0; i < N; i++) {
@@ -65,8 +77,21 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
       vertices[i][j].y =
           2.0 * sqrt(fftValues[j][i]) / SQRT_MAX_FFT_OUTPUT - 1.0;
       vertices[i][j].z = 2.0 * j / M - 1.0;
+
+      // if (j == 0) {
+      //   ys.push_back(vertices[i][j].y);
+      // }
     }
   }
+  big_lock.unlock();
+
+  // if (i % 1000 == 0) {
+  //   std::cerr << "[";
+  //   for (auto y : ys) {
+  //     std::cout << (y + 1.0) / 2 << ",";
+  //   }
+  //   std::cerr << "]" << std::endl;
+  // }
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);

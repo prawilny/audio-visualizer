@@ -2,6 +2,7 @@
 #include "converter.h"
 #include "fft.h"
 #include "gl.h"
+#include "global.h"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl.h"
@@ -18,6 +19,7 @@
 #include <fmt123.h>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
@@ -45,8 +47,7 @@ static bool audio_finished = false;
 std::optional<PCM_data> audio_data;
 std::deque<std::vector<double>> plot_data;
 std::deque<std::vector<double>> plot_fft_input;
-
-// TODO: make sure that visualization matches audio
+std::mutex big_lock;
 
 void SDL_error_exit() {
   printf("Error: %s\n", SDL_GetError());
@@ -107,13 +108,21 @@ void audio_callback(void *udata, Uint8 *stream, int len) {
 
   int bytes_to_be_copied = len < left_in_buffer ? len : left_in_buffer;
 
+  big_lock.lock();
   plot_fft_input.push_front(fft_samples(bytes_to_be_copied));
+  big_lock.unlock();
   if (plot_fft_input.size() > HISTORY_SIZE) {
+    big_lock.lock();
     plot_fft_input.resize(HISTORY_SIZE);
+    big_lock.unlock();
   }
+  big_lock.lock();
   plot_data.push_front(amplitudes_of_harmonics(plot_fft_input.front()));
+  big_lock.unlock();
   if (plot_data.size() > HISTORY_SIZE) {
+    big_lock.lock();
     plot_data.resize(HISTORY_SIZE);
+    big_lock.unlock();
   }
 
   SDL_MixAudio(stream,
@@ -334,10 +343,12 @@ void draw_visualization() {
       std::vector<double> waveLabels(waveN);
       std::iota(waveLabels.begin(), waveLabels.end(), 0);
 
+      big_lock.lock();
       spectrogramDisplay(fftLabels.data(), plot_data.front().data(), fftN,
                          waveLabels.data(), plot_fft_input.front().data(),
                          waveN, audio_data.value().format);
     } else if (selected_visualization == V3D) {
+      big_lock.lock();
       plot3dDisplay(fftLabels, plot_data, audio_data.value().format);
     }
   }
