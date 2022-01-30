@@ -12,6 +12,6 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
                    const std::deque<std::vector<double>> &fftValues,
                    SDL_AudioFormat fmt);
 
-void plot3dHandleKeyEvent(const SDL_KeyboardEvent &event);
+void plot3dHandleKeyEvent();
 
 #endif

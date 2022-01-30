@@ -43,6 +43,7 @@ void plot3dInit() {
   if (program == 0) {
     throw std::runtime_error("couldnt't create plot3d program");
   }
+  glGenBuffers(1, &vbo);
 
   attribute_coord3d = get_attrib(program, "coord3d");
   uniform_vertex_transform = get_uniform(program, "vertex_transform");
@@ -65,8 +66,6 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   }
   const size_t M = fftValues.size();
   const double labelSpan = span(fftLabels.data(), fftLabels.size());
-
-  glGenBuffers(1, &vbo);
 
   glm::vec3 vertices[N][M];
   for (int i = 0; i < N; i++) {
@@ -104,40 +103,38 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glDisable(GL_BLEND);
 }
 
-void plot3dHandleKeyEvent(const SDL_KeyboardEvent &event) {
+void plot3dHandleKeyEvent() {
   float deltaDegs = 3.0;
-  float deltaDistance = 0.05;
-  switch (event.keysym.scancode) {
-  case SDL_SCANCODE_LEFT:
+  float deltaRadius = 0.05;
+
+  if (keyboard_state[SDL_SCANCODE_LEFT]) {
     eye.azimuth -= deltaDegs;
-    break;
-  case SDL_SCANCODE_RIGHT:
+  }
+  if (keyboard_state[SDL_SCANCODE_RIGHT]) {
+
     eye.azimuth += deltaDegs;
-    break;
-  case SDL_SCANCODE_UP:
+  }
+  if (keyboard_state[SDL_SCANCODE_UP]) {
     eye.inclination -= deltaDegs;
     if (eye.inclination <= 0.0) {
       eye.inclination += deltaDegs;
     }
-    break;
-  case SDL_SCANCODE_DOWN:
+  }
+  if (keyboard_state[SDL_SCANCODE_DOWN]) {
     eye.inclination += deltaDegs;
     if (eye.inclination >= 180.0) {
       eye.inclination -= deltaDegs;
     }
-    break;
-  case SDL_SCANCODE_EQUALS:
-    if (eye.r > deltaDistance) {
-      eye.r -= deltaDistance;
+  }
+  if (keyboard_state[SDL_SCANCODE_EQUALS]) {
+    if (eye.r > deltaRadius) {
+      eye.r -= deltaRadius;
     }
-    break;
-  case SDL_SCANCODE_MINUS:
-    eye.r += deltaDistance;
+  }
+  if (keyboard_state[SDL_SCANCODE_MINUS]) {
+    eye.r += deltaRadius;
     if (eye.r > DRAW_DISTANCE - 2.0) {
-      eye.r -= deltaDistance;
+      eye.r -= deltaRadius;
     }
-    break;
-  default:
-    break;
   }
 }

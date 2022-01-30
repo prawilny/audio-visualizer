@@ -1,4 +1,5 @@
 #include "SDL_events.h"
+#include "SDL_scancode.h"
 #include "converter.h"
 #include "fft.h"
 #include "gl.h"
@@ -47,7 +48,9 @@ static bool audio_finished = false;
 std::optional<PCM_data> audio_data;
 std::deque<std::vector<double>> plot_data;
 std::deque<std::vector<double>> plot_fft_input;
+
 std::mutex big_lock;
+const Uint8 *keyboard_state;
 
 void SDL_error_exit() {
   printf("Error: %s\n", SDL_GetError());
@@ -254,6 +257,7 @@ void set_up() {
   ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
+  keyboard_state = SDL_GetKeyboardState(nullptr);
   spectrogramInit();
   plot3dInit();
 }
@@ -336,20 +340,21 @@ void imgui_frame() {
 void draw_visualization() {
   if (plot_data.size() != 0) {
     size_t fftN = 0;
+    big_lock.lock();
     for (auto &data : plot_data) {
       fftN = std::max(fftN, data.size());
     }
+    big_lock.unlock();
     std::vector<double> fftLabels(fftN);
     for (size_t i = 0; i < fftN; i++) {
       fftLabels[i] = i * TARGET_FPS;
     }
 
     if (selected_visualization == V2D) {
+      big_lock.lock();
       size_t waveN = plot_fft_input.front().size();
       std::vector<double> waveLabels(waveN);
       std::iota(waveLabels.begin(), waveLabels.end(), 0);
-
-      big_lock.lock();
       spectrogramDisplay(fftLabels.data(), plot_data.front().data(), fftN,
                          waveLabels.data(), plot_fft_input.front().data(),
                          waveN, audio_data.value().format);
@@ -388,9 +393,17 @@ int main() {
             event.window.windowID == SDL_GetWindowID(window))
           done = true;
 
-        if (event.type == SDL_KEYDOWN && !io->WantCaptureKeyboard &&
-            selected_visualization == V3D) {
-          plot3dHandleKeyEvent(event.key);
+        if (event.type == SDL_KEYDOWN && !io->WantCaptureKeyboard) {
+          if (keyboard_state[SDL_SCANCODE_SPACE]) {
+            toggle_playback();
+          }
+          if (keyboard_state[SDL_SCANCODE_LCTRL] &&
+              keyboard_state[SDL_SCANCODE_O]) {
+                select_file();
+          }
+          if (selected_visualization == V3D) {
+            plot3dHandleKeyEvent();
+          }
         }
       }
 
