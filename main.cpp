@@ -29,7 +29,7 @@
 #define V2D 0
 #define V3D 1
 
-const int TARGET_FPS = 60;
+const int TARGET_FPS = 50;
 const int HISTORY_SIZE = 5 * TARGET_FPS;
 
 static SDL_Window *window;
@@ -308,24 +308,25 @@ void imgui_frame() {
     ImGui::SameLine();
     ImGui::RadioButton("3D", &selected_visualization, V3D);
 
-    ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
+    if (audio_data.has_value()) {
+      char label[12];
+      int sample_byte_size =
+          ((SDL_AUDIO_MASK_BITSIZE & audio_data.value().format) / 8);
 
-    char label[12];
-    int sample_byte_size =
-        ((SDL_AUDIO_MASK_BITSIZE & audio_data.value().format) / 8);
-
-    int seconds_now = audio_data->processed_bytes /
-                      (audio_data->rate * audio_data->channels) /
-                      sample_byte_size;
-    int seconds_all = audio_data->bytes.size() /
-                      (audio_data->rate * audio_data->channels) /
-                      sample_byte_size;
-    sprintf(label, "%02d:%02d/%02d:%02d", seconds_now / 60, seconds_now % 60,
-            seconds_all / 60, seconds_all % 60);
-    int seconds_slider = seconds_now;
-    if (ImGui::SliderInt(label, &seconds_slider, 0, seconds_all, "")) {
-      set_audio_position(seconds_slider);
+      int seconds_now = audio_data->processed_bytes /
+                        (audio_data->rate * audio_data->channels) /
+                        sample_byte_size;
+      int seconds_all = audio_data->bytes.size() /
+                        (audio_data->rate * audio_data->channels) /
+                        sample_byte_size;
+      sprintf(label, "%02d:%02d/%02d:%02d", seconds_now / 60, seconds_now % 60,
+              seconds_all / 60, seconds_all % 60);
+      int seconds_slider = seconds_now;
+      if (ImGui::SliderInt(label, &seconds_slider, 0, seconds_all, "")) {
+        set_audio_position(seconds_slider);
+      }
     }
+    ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
     ImGui::End();
   }
   // Rendering

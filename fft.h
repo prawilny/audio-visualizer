@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-const uint64_t MAX_FFT_OUTPUT = 21000000; // Value for 25 FPS (25Hz FFT resolution).
+const uint64_t MAX_FFT_OUTPUT = 11000000; // Value for 50 FPS (50Hz FFT resolution).
 
 std::vector<double> amplitudes_of_harmonics(std::vector<double> &wave_values);
 
