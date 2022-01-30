@@ -3,17 +3,9 @@
 #include <fftw3.h>
 #include <memory>
 #include <vector>
-// TODO: Check single-precision FFT in case it bottlenecks the program.
 
 #define RE_IDX 0
 #define IM_IDX 1
-
-// Here, the [0] element holds the real part and the [1] element holds the
-// imaginary part. If you have a variable complex<double> *x, you can pass it
-// directly to FFTW via reinterpret_cast<fftw_complex*>(x)
-
-// TODO: the layout of data is: SAMPLE_LEFT || SAMPLE_RIGHT || SAMPLE_LEFT ||
-// SAMPLE_RIGHT... What value should we use: sum/average? max?
 
 std::vector<double> amplitudes_of_harmonics(std::vector<double> &wave_values) {
   size_t n = wave_values.size();

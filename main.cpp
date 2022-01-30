@@ -173,7 +173,6 @@ void start_audio() {
   audio_played = true;
 }
 
-// TODO: not called after running file to end!
 void stop_audio() {
   if (!audio_played) {
     return;
@@ -234,8 +233,6 @@ void set_up() {
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-  // TODO: replace SDL_WINDOW_RESIZABLE with SDL_WINDOW_FULLSCREEN or
-  // SDL_WINDOW_FULLSCREEN_DESKTOP
   SDL_WindowFlags window_flags =
       (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
                         SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL);
@@ -333,7 +330,6 @@ void imgui_frame() {
     ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
     ImGui::End();
   }
-  // Rendering
   ImGui::Render();
 }
 
@@ -368,10 +364,6 @@ void draw_visualization() {
 int main() {
   try {
     set_up();
-
-    // TODO: remove
-    select_file();
-    toggle_playback();
     selected_visualization = V3D;
 
     while (!done) {

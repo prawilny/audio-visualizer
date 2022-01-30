@@ -11,7 +11,6 @@
 #include <stdexcept>
 #include <vector>
 
-// TODO: return to GLdouble
 struct point {
   GLfloat x;
   GLfloat y;

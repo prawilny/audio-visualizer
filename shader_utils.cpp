@@ -22,7 +22,6 @@ std::string error_log(GLuint object) {
   else if (glIsProgram(object))
     glGetProgramInfoLog(object, log_length, NULL, log);
 
-  // fprintf(stderr, "%s", log);
   std::string result(log, log_length);
   free(log);
   return result;

@@ -15,7 +15,7 @@ SOURCES += $(TINYFD_DIR)/tinyfiledialogs.c
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 LINUX_GL_LIBS = -lGL
 
-CXXFLAGS = -g -Wall -Wformat -std=c++17
+CXXFLAGS = -g -Wall -Wformat -std=c++17 -O2
 CXXFLAGS += -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -I$(TINYFD_DIR)
 CXXFLAGS += -I$(IMPLOT_DIR)
