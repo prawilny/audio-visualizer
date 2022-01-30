@@ -25,6 +25,7 @@ static GLuint fft_program;
 static GLuint wave_program;
 static GLint fft_attr_coord2d;
 static GLint wave_attr_coord2d;
+static GLuint vbo;
 
 void spectrogramInit() {
   fft_program = create_program(FFT_VERTEX_SHADER, FFT_FRAGMENT_SHADER);
@@ -32,12 +33,12 @@ void spectrogramInit() {
 
   wave_program = create_program(WAVE_VERTEX_SHADER, WAVE_FRAGMENT_SHADER);
   wave_attr_coord2d = get_attrib(wave_program, "coord2d");
+
+  glGenBuffers(1, &vbo);
 }
 
 static void display(std::vector<point> &graph, GLuint program,
                     GLint attr_coord2d) {
-  GLuint vbo;
-  glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
   glBufferData(GL_ARRAY_BUFFER, sizeof(point) * graph.size(), graph.data(),
