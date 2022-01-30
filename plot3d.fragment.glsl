@@ -13,6 +13,10 @@ varying vec3 model_coord;
 #define COLOR6 vec3(255, 0, 0)
 
 void main(void) {
+	if (model_coord.x == 0.0 && model_coord.y == 0.0 && model_coord.z == 0.0) {
+		discard;
+	}
+
 	float frac = (model_coord.y + 1.0) / 2;
 	vec3 color;
 	if (frac < LIMIT1) {
