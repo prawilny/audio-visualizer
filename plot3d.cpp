@@ -52,8 +52,6 @@ void plot3dInit() {
   }
 }
 
-// static int i = 0;
-
 void plot3dDisplay(const std::vector<double> &fftLabels,
                    const std::deque<std::vector<double>> &fftValues,
                    SDL_AudioFormat fmt) {
@@ -68,7 +66,6 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
 
   glGenBuffers(1, &vbo);
 
-  // std::vector<float> ys;
 
   glm::vec3 vertices[N][M];
   for (int i = 0; i < N; i++) {
@@ -77,21 +74,9 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
       vertices[i][j].y =
           2.0 * sqrt(fftValues[j][i]) / SQRT_MAX_FFT_OUTPUT - 1.0;
       vertices[i][j].z = 2.0 * j / M - 1.0;
-
-      // if (j == 0) {
-      //   ys.push_back(vertices[i][j].y);
-      // }
     }
   }
   big_lock.unlock();
-
-  // if (i % 1000 == 0) {
-  //   std::cerr << "[";
-  //   for (auto y : ys) {
-  //     std::cout << (y + 1.0) / 2 << ",";
-  //   }
-  //   std::cerr << "]" << std::endl;
-  // }
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
@@ -111,7 +96,7 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glVertexAttribPointer(attribute_coord3d, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-  glPointSize(4);
+  glPointSize(4.0);
   glDrawArrays(GL_POINTS, vbo, M * N);
 }
 
