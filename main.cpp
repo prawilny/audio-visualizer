@@ -311,10 +311,15 @@ void imgui_frame() {
     ImGui::Text("Average FPS: %.1f", ImGui::GetIO().Framerate);
 
     char label[12];
+    int sample_byte_size =
+        ((SDL_AUDIO_MASK_BITSIZE & audio_data.value().format) / 8);
+
     int seconds_now = audio_data->processed_bytes /
-                      (audio_data->rate * audio_data->channels) / 2;
+                      (audio_data->rate * audio_data->channels) /
+                      sample_byte_size;
     int seconds_all = audio_data->bytes.size() /
-                      (audio_data->rate * audio_data->channels) / 2;
+                      (audio_data->rate * audio_data->channels) /
+                      sample_byte_size;
     sprintf(label, "%02d:%02d/%02d:%02d", seconds_now / 60, seconds_now % 60,
             seconds_all / 60, seconds_all % 60);
     int seconds_slider = seconds_now;
