@@ -28,5 +28,5 @@ void main(void) {
 	} else {
 		color = COLOR6;
 	}
-	gl_FragColor = vec4(color, model_coord.z);
+	gl_FragColor = vec4(color, 5 * (model_coord.z + 1.0));
 }

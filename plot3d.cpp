@@ -58,7 +58,9 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   const size_t N = fftLabels.size();
   for (auto fftValueVector : fftValues) {
     if (fftValueVector.size() != N) {
-      throw std::runtime_error("sizes should be equal!");
+      // Batch of values that is shorter than labels.
+      // Let's ignore it - it's probably the last one in the file.
+      return;
     }
   }
   const size_t M = fftValues.size();
@@ -66,14 +68,13 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
 
   glGenBuffers(1, &vbo);
 
-
   glm::vec3 vertices[N][M];
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < M; j++) {
       vertices[i][j].x = 2.0 * fftLabels[i] / labelSpan - 1.0;
       vertices[i][j].y =
           2.0 * sqrt(fftValues[j][i]) / SQRT_MAX_FFT_OUTPUT - 1.0;
-      vertices[i][j].z = 2.0 * j / M - 1.0;
+      vertices[i][j].z = 1.0 - 2.0 * j / M;
     }
   }
   big_lock.unlock();
@@ -97,7 +98,10 @@ void plot3dDisplay(const std::vector<double> &fftLabels,
   glVertexAttribPointer(attribute_coord3d, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
   glPointSize(4.0);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
   glDrawArrays(GL_POINTS, vbo, M * N);
+  glDisable(GL_BLEND);
 }
 
 void plot3dHandleKeyEvent(const SDL_KeyboardEvent &event) {
