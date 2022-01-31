@@ -7,7 +7,6 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl.h"
-#include "implot.h"
 #include "plot3d.h"
 #include "spectrogram.h"
 #include "tinyfiledialogs.h"
@@ -246,7 +245,6 @@ void set_up() {
   // Setup Dear ImGui
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  ImPlot::CreateContext();
   io = &ImGui::GetIO();
   ImGui::StyleColorsDark();
 
@@ -262,7 +260,6 @@ void set_up() {
 void clean_up() {
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplSDL2_Shutdown();
-  ImPlot::DestroyContext();
   ImGui::DestroyContext();
 
   SDL_GL_DeleteContext(gl_context);
